@@ -1,0 +1,13 @@
+{
+  "context_servers": {
+    "firecrawl": {
+      "source": "custom",
+      "command": "npx",
+      "args": [
+        "-y",
+        "firecrawl-mcp"
+      ],
+      "env": {}
+    }
+  }
+}

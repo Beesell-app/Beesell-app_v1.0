@@ -1,0 +1,17 @@
+node_modules
+.next
+.git
+.vercel
+coverage
+dist
+build
+*.log
+Dockerfile*
+README.md
+.prisma
+lib/generated
+.cursor
+.codex
+.gemini
+.zed
+.agents

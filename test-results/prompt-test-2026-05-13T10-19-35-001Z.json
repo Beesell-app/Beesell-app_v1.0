@@ -1,0 +1,221 @@
+{
+  "timestamp": "2026-05-13T10:19:35.002Z",
+  "scenarios": 10,
+  "passed": 0,
+  "failed": 10,
+  "totalTokens": 0,
+  "totalCost": 0,
+  "avgDuration": 14.1,
+  "results": [
+    {
+      "id": "fashion-1",
+      "name": "Tas wanita casual Instagram",
+      "params": {
+        "productName": "Tas Selempang Kulit Sintetis",
+        "productPrice": "Rp 149.000",
+        "productBenefits": "Bahan kulit sintetis premium, muat HP + dompet + makeup, strap panjang adjustable",
+        "targetAudience": "wanita usia 20-30 tahun, suka fashion casual",
+        "tone": "casual",
+        "language": "indonesian_casual",
+        "emoji": "moderate",
+        "ctaStyle": "medium",
+        "platform": "instagram",
+        "variants": 3
+      },
+      "success": false,
+      "variants": [],
+      "error": "OpenAI API key is missing. Pass it using the 'apiKey' parameter or the OPENAI_API_KEY environment variable.",
+      "duration": 111,
+      "tokensUsed": 0,
+      "cost_usd": 0
+    },
+    {
+      "id": "fashion-2",
+      "name": "Sepatu sneaker hype TikTok",
+      "params": {
+        "productName": "Sneakers Putih Classic",
+        "productPrice": "Rp 249.000",
+        "productBenefits": "Desain minimalis, cocok OOTD, material kanvas breathable",
+        "tone": "energetic",
+        "language": "mixed_english",
+        "emoji": "heavy",
+        "ctaStyle": "aggressive",
+        "platform": "tiktok",
+        "variants": 3
+      },
+      "success": false,
+      "variants": [],
+      "error": "OpenAI API key is missing. Pass it using the 'apiKey' parameter or the OPENAI_API_KEY environment variable.",
+      "duration": 3,
+      "tokensUsed": 0,
+      "cost_usd": 0
+    },
+    {
+      "id": "fashion-3",
+      "name": "Dress pesta luxury Shopee",
+      "params": {
+        "productName": "Dress Malam Satin Premium",
+        "productPrice": "Rp 899.000",
+        "productBenefits": "Material satin halus, cutting flattering, cocok untuk event formal",
+        "tone": "luxury",
+        "language": "indonesian_formal",
+        "emoji": "none",
+        "ctaStyle": "soft",
+        "platform": "shopee",
+        "variants": 3
+      },
+      "success": false,
+      "variants": [],
+      "error": "OpenAI API key is missing. Pass it using the 'apiKey' parameter or the OPENAI_API_KEY environment variable.",
+      "duration": 3,
+      "tokensUsed": 0,
+      "cost_usd": 0
+    },
+    {
+      "id": "beauty-1",
+      "name": "Skincare serum Instagram authoritative",
+      "params": {
+        "productName": "Niacinamide Serum 10%",
+        "productPrice": "Rp 89.000",
+        "productBenefits": "Mengurangi pori, bekas jerawat, hasil dalam 2 minggu. BPOM approved",
+        "targetAudience": "wanita dengan masalah jerawat",
+        "tone": "authoritative",
+        "language": "indonesian_casual",
+        "emoji": "minimal",
+        "ctaStyle": "medium",
+        "platform": "instagram",
+        "variants": 3
+      },
+      "success": false,
+      "variants": [],
+      "error": "OpenAI API key is missing. Pass it using the 'apiKey' parameter or the OPENAI_API_KEY environment variable.",
+      "duration": 3,
+      "tokensUsed": 0,
+      "cost_usd": 0
+    },
+    {
+      "id": "beauty-2",
+      "name": "Lipstik playful TikTok",
+      "params": {
+        "productName": "Matte Lip Cream Peach Glow",
+        "productPrice": "Rp 39.000",
+        "productBenefits": "Warna long lasting 8 jam, non-drying, 6 shades nude",
+        "tone": "playful",
+        "language": "indonesian_casual",
+        "emoji": "heavy",
+        "ctaStyle": "medium",
+        "platform": "tiktok",
+        "variants": 3
+      },
+      "success": false,
+      "variants": [],
+      "error": "OpenAI API key is missing. Pass it using the 'apiKey' parameter or the OPENAI_API_KEY environment variable.",
+      "duration": 3,
+      "tokensUsed": 0,
+      "cost_usd": 0
+    },
+    {
+      "id": "food-1",
+      "name": "Sambal friendly WhatsApp",
+      "params": {
+        "productName": "Sambal Bawang Bu Tini",
+        "productPrice": "Rp 45.000",
+        "productBenefits": "Homemade, tanpa pengawet, pedas level 3, tahan 2 minggu di kulkas",
+        "tone": "friendly",
+        "language": "indonesian_casual",
+        "emoji": "moderate",
+        "ctaStyle": "medium",
+        "platform": "whatsapp",
+        "variants": 2
+      },
+      "success": false,
+      "variants": [],
+      "error": "OpenAI API key is missing. Pass it using the 'apiKey' parameter or the OPENAI_API_KEY environment variable.",
+      "duration": 3,
+      "tokensUsed": 0,
+      "cost_usd": 0
+    },
+    {
+      "id": "food-2",
+      "name": "Kopi specialty professional Tokopedia",
+      "params": {
+        "productName": "Arabica Gayo Roasted Beans 250g",
+        "productPrice": "Rp 125.000",
+        "productBenefits": "Single origin Aceh, medium roast, notes cokelat & karamel, roasted fresh weekly",
+        "tone": "professional",
+        "language": "indonesian_formal",
+        "emoji": "minimal",
+        "ctaStyle": "medium",
+        "platform": "tokopedia",
+        "variants": 3
+      },
+      "success": false,
+      "variants": [],
+      "error": "OpenAI API key is missing. Pass it using the 'apiKey' parameter or the OPENAI_API_KEY environment variable.",
+      "duration": 2,
+      "tokensUsed": 0,
+      "cost_usd": 0
+    },
+    {
+      "id": "electronics-1",
+      "name": "Powerbank energetic TikTok Shop",
+      "params": {
+        "productName": "Powerbank 20000mAh Fast Charging",
+        "productPrice": "Rp 199.000",
+        "productBenefits": "20000mAh real capacity, PD 22.5W fast charge, bisa charge laptop, 2 USB + 1 Type-C",
+        "tone": "energetic",
+        "language": "indonesian_casual",
+        "emoji": "heavy",
+        "ctaStyle": "aggressive",
+        "platform": "tiktok_shop",
+        "variants": 3
+      },
+      "success": false,
+      "variants": [],
+      "error": "OpenAI API key is missing. Pass it using the 'apiKey' parameter or the OPENAI_API_KEY environment variable.",
+      "duration": 3,
+      "tokensUsed": 0,
+      "cost_usd": 0
+    },
+    {
+      "id": "edge-1",
+      "name": "No price + 1 variant only",
+      "params": {
+        "productName": "Bouquet Bunga Segar",
+        "tone": "friendly",
+        "language": "indonesian_casual",
+        "emoji": "moderate",
+        "ctaStyle": "soft",
+        "platform": "instagram",
+        "variants": 1
+      },
+      "success": false,
+      "variants": [],
+      "error": "OpenAI API key is missing. Pass it using the 'apiKey' parameter or the OPENAI_API_KEY environment variable.",
+      "duration": 4,
+      "tokensUsed": 0,
+      "cost_usd": 0
+    },
+    {
+      "id": "edge-2",
+      "name": "Max 5 variants on threads",
+      "params": {
+        "productName": "Buku Self Improvement Bestseller",
+        "productPrice": "Rp 79.000",
+        "productBenefits": "200 halaman, full Bahasa Indonesia, cocok untuk pemula",
+        "tone": "authoritative",
+        "language": "indonesian_casual",
+        "emoji": "minimal",
+        "ctaStyle": "soft",
+        "platform": "threads",
+        "variants": 5
+      },
+      "success": false,
+      "variants": [],
+      "error": "OpenAI API key is missing. Pass it using the 'apiKey' parameter or the OPENAI_API_KEY environment variable.",
+      "duration": 6,
+      "tokensUsed": 0,
+      "cost_usd": 0
+    }
+  ]
+}
