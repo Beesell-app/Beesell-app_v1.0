@@ -8,10 +8,11 @@ import { createClient } from '@/lib/supabase/server'
 import { z }            from 'zod'
 
 export type AuthResult = {
-  success: boolean
-  error?:  string
-  field?:  'name' | 'email' | 'password' | 'passwordConfirm'
-  hint?:   'verify-email' | 'duplicate' | 'reset-password' | 'use-google'
+  success?: boolean
+  error?: string
+  field?: 'name' | 'email' | 'password'
+  hint?: 'verify-email' | 'email-failed' | 'duplicate'
+  email?: string
 }
 
 // ── Validators ────────────────────────────────────────────────

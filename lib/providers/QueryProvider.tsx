@@ -10,7 +10,7 @@ import { ReactQueryDevtools }                from '@tanstack/react-query-devtool
 import { ReactNode, useEffect, useRef, useState }       from 'react'
 import { createClient }                      from '@/lib/supabase/client'
 import { useSessionStore }                   from '@/store/sessionStore'
-import { SESSION_KEY }                       from '@/lib/hooks/useSession'
+import { SESSION_KEY }                       from '@/hooks/useSession'
 
 
 

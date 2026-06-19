@@ -363,18 +363,61 @@ export default function PackshotPage() {
         ))}
       </div>
 
+      {/* ── PACKSHOT DEFINITION ─────────────────────────────── */}
+      <div style={{ marginBottom:'18px', borderRadius:'14px', border:'1px solid #E0E7FF', background:'linear-gradient(135deg,#F0F4FF,#F5F3FF)', overflow:'hidden' }}>
+        <div style={{ padding:'13px 18px 11px', borderBottom:'1px solid #E0E7FF', display:'flex', alignItems:'center', gap:'10px' }}>
+          <div style={{ width:'32px', height:'32px', borderRadius:'9px', background:'linear-gradient(135deg,#7C3AED,#2563EB)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'16px', flexShrink:0 }}>📦</div>
+          <div>
+            <div style={{ fontSize:'13px', fontWeight:800, color:'#1E1B4B' }}>Apa itu Packshot?</div>
+            <div style={{ fontSize:'10px', color:'#6366F1', marginTop:'1px' }}>Standar foto produk untuk catalog, PDP, dan marketplace listing</div>
+          </div>
+        </div>
+        <div style={{ padding:'14px 18px 16px' }}>
+          <p style={{ fontSize:'12px', color:'#374151', lineHeight:1.75, margin:'0 0 14px', borderLeft:'3px solid #7C3AED', paddingLeft:'12px' }}>
+            A product photo built for <strong>catalogs, PDPs, and marketplace listings</strong>. In fashion, it shows a single product with <strong>consistent lighting</strong>, <strong>accurate color</strong>, and a <strong>clear silhouette</strong>. Common variants: ghost mannequin, on-hanger, flat-lay, and floating.
+          </p>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(185px,1fr))', gap:'9px' }}>
+            {[
+              { icon:'👗', variant:'Ghost Mannequin', use:'PDP wajib fashion', color:'#7C3AED', bg:'#F5F3FF', preset:'ghost-mannequin', desc:'Pakaian pada invisible mannequin — bentuk & struktur 3D tanpa model nyata.' },
+              { icon:'🪝', variant:'On-Hanger',        use:'TikTok Shop & IG',  color:'#0891B2', bg:'#ECFEFF', preset:'on-hanger',       desc:'Pakaian tergantung natural — authentic, populer di TikTok Shop.' },
+              { icon:'👕', variant:'Flat-Lay',          use:'Editorial & IG',   color:'#059669', bg:'#ECFDF5', preset:'flat-lay-fashion', desc:'Foto dari atas, pakaian digelar rapi — bersih dan editorial.' },
+              { icon:'✨', variant:'Floating',          use:'Meta & TikTok Ads', color:'#D97706', bg:'#FFFBEB', preset:'floating-fashion', desc:'Pakaian melayang dramatis — efek kreatif stop-scroll untuk iklan.' },
+            ].map(v => (
+              <div key={v.variant}
+                onClick={() => { setSelectedId(v.preset); setActiveCat('fashion') }}
+                style={{ padding:'12px 13px', borderRadius:'11px', background:v.bg, border:`1.5px solid ${v.color}25`, cursor:'pointer', transition:'all .15s' }}
+                onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor=v.color; el.style.transform='translateY(-2px)'; el.style.boxShadow=`0 4px 12px ${v.color}20` }}
+                onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor=v.color+'25'; el.style.transform=''; el.style.boxShadow='' }}
+              >
+                <div style={{ display:'flex', gap:'8px', alignItems:'flex-start', marginBottom:'6px' }}>
+                  <span style={{ fontSize:'20px', lineHeight:1 }}>{v.icon}</span>
+                  <div>
+                    <div style={{ fontSize:'12px', fontWeight:800, color:v.color }}>{v.variant}</div>
+                    <div style={{ fontSize:'9px', fontWeight:600, color:v.color, opacity:.7, marginTop:'1px' }}>{v.use}</div>
+                  </div>
+                </div>
+                <p style={{ fontSize:'11px', color:'#374151', lineHeight:1.55, margin:'0 0 8px' }}>{v.desc}</p>
+                <div style={{ fontSize:'10px', fontWeight:700, color:v.color }}>Pakai preset ini →</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ marginTop:'12px', padding:'10px 13px', borderRadius:'9px', background:'rgba(124,58,237,.07)', border:'1px solid rgba(124,58,237,.15)', fontSize:'11px', color:'#4C1D95', lineHeight:1.6 }}>
+            💡 <strong>Tips fashion:</strong> Gunakan <em>Ghost Mannequin</em> sebagai foto utama PDP + <em>Flat Lay</em> untuk carousel. Kombinasi ini memenuhi standar Shopee Mall, Tokopedia Official, dan Lazada.
+          </div>
+        </div>
+      </div>
+
       <div style={{ display:'grid', gridTemplateColumns:'340px 1fr', gap:'18px', alignItems:'flex-start' }}>
 
         {/* ══ LEFT PANEL ════════════════════════════════════════ */}
         <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
 
           {/* Upload zone */}
-          <div style={{ borderRadius:'14px', border:`2px dashed ${C.slate200}`, background:C.slate50, overflow:'hidden' }}
+          <div style={{ borderRadius:'14px', border:`2px dashed ${C.slate200}`, background:C.slate50, overflow:'hidden', cursor:loading?'default':'pointer' }}
             onDragOver={e => { e.preventDefault(); (e.currentTarget as HTMLElement).style.borderColor = C.brand }}
             onDragLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = C.slate200 }}
             onDrop={e => { (e.currentTarget as HTMLElement).style.borderColor = C.slate200; onDrop(e) }}
             onClick={() => !loading && fileRef.current?.click()}
-            style={{ cursor:loading?'default':'pointer' }}
           >
             {preview ? (
               <div style={{ position:'relative' }}>

@@ -13,7 +13,7 @@ const REGION          = 'us-east-1'  // serverless tier region
 
 async function main() {
   if (!process.env.PINECONE_API_KEY) {
-    console.error('✗ PINECONE_API_KEY not set in .env.local')
+    console.error('✗ PINECONE_API_KEY not set in .env')
     process.exit(1)
   }
 
@@ -75,7 +75,7 @@ async function main() {
     if (desc.status?.ready) {
       console.log(`\n✓ Index ready! Host: ${desc.host}`)
       console.log(`\nNext steps:`)
-      console.log(`  1. Update .env.local dengan PINECONE_INDEX_NAME=${INDEX_NAME}`)
+      console.log(`  1. Update .env dengan PINECONE_INDEX_NAME=${INDEX_NAME}`)
       console.log(`  2. Restart dev server`)
       console.log(`  3. Cek cache stats di /api/admin/cache-stats (kalau dibuat)`)
       process.exit(0)

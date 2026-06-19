@@ -1,202 +1,229 @@
 'use client'
-// apps/web-app/components/dashboard/TopBar.tsx
-// ── Responsive top bar ────────────────────────────────────────
-// Mobile: hamburger + logo + avatar
-// Desktop: breadcrumb / page title + right actions
-import Link            from 'next/link'
+// components/dashboard/TopBar.tsx
+// ══════════════════════════════════════════════════════════════
+// User Dashboard Top Bar — Purple theme + Superuser Integration
+// 
+// CHANGES (Phase 3 Integration):
+//   1. useUserRole() integrate
+//   2. Credit widget show ∞ untuk superuser
+//   3. SUPERUSER pill di samping avatar
+//   4. Avatar special crown color untuk superuser
+// ══════════════════════════════════════════════════════════════
+
+import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Menu, Sparkles, Bell } from 'lucide-react'
-import { useSidebarStore } from '@/store/sidebarStore'
-import { useHasExpiredConnection } from '@/lib/hooks/usePlatformConnections'
-import { useHasExpiredConnection as _hook } from '@/lib/hooks/usePlatformConnections'
-import { NotificationBell } from '@/components/notifications/NotificationBell'
-// Breadcrumb label per route
-const ROUTE_LABELS: Record<string, string> = {
-  '/dashboard':            'Dashboard',
-  '/content':              'Konten Saya',
-  '/content/new':          'Buat Konten Baru',
-  '/library':              'Content Library',
-  '/editor':               'Template Editor',
-  '/scheduler':            'Jadwal Post',
-  '/settings':             'Pengaturan',
-  '/settings/brand-kit':   'Brand Kit',
-  '/settings/connections': 'Koneksi Platform',
-  '/settings/billing':     'Billing',
-  '/analytics':            'Analytics',
+import { 
+  Bell, Plus, CreditCard, ChevronRight, Crown, Shield, 
+  Infinity as InfinityIcon,
+} from 'lucide-react'
+import { useCredits } from '@/hooks/use-credits'
+import { useDailyUsage } from '@/hooks/use-daily-usage'
+import { useUserRole } from '@/hooks/use-user-role'
+import { 
+  getToolByPath,
+  CATEGORY_INFO,
+  type Category,
+} from './studio-menu-config'
+
+const C = {
+  purple:'#7C3AED', purpleBg:'#F5F3FF',
+  pink:'#EC4899', amber:'#F59E0B', green:'#10B981', red:'#EF4444',
+  slate900:'#0F172A', slate700:'#334155', slate600:'#475569',
+  slate500:'#64748B', slate400:'#94A3B8', slate300:'#CBD5E1',
+  slate200:'#E2E8F0', slate100:'#F1F5F9', slate50:'#F8FAFC',
+  white:'#FFFFFF',
 }
 
-function usePageTitle(): string {
+export function DashboardTopbar() {
   const pathname = usePathname()
-  // Exact match first
-  if (ROUTE_LABELS[pathname]) return ROUTE_LABELS[pathname]
-  // Prefix match (for dynamic routes like /content/[id])
-  const prefix = Object.keys(ROUTE_LABELS)
-    .filter(k => pathname.startsWith(k) && k !== '/')
-    .sort((a, b) => b.length - a.length)[0]
-  return ROUTE_LABELS[prefix ?? ''] ?? 'BeeSell AI'
-}
+  const { balance, monthly_quota } = useCredits()
+  const { tier } = useDailyUsage()
+  const { isSuperuser, email } = useUserRole()
 
-export function TopBar() {
-  const pageTitle       = usePageTitle()
-  const setMobileOpen   = useSidebarStore(s => s.setMobileOpen)
-  const collapsed       = useSidebarStore(s => s.collapsed)
-  const hasExpired      = useHasExpiredConnection()
-
-  const sidebarW = collapsed ? 64 : 240
+  const breadcrumb = parsePathToBreadcrumb(pathname)
 
   return (
-    <header
-      style={{
-        position:    'sticky',
-        top:         0,
-        zIndex:      30,
-        background:  '#fff',
-        borderBottom: '1px solid #E2E8F0',
-        height:      '56px',
-        display:     'flex',
-        alignItems:  'center',
-        paddingLeft: '16px',
-        paddingRight: '16px',
-        gap:         '12px',
-        boxShadow:   '0 1px 0 #E2E8F0',
-        fontFamily:  "'DM Sans', sans-serif",
-      }}
-      className="topbar"
-    >
-      {/* Mobile: hamburger */}
-      <button
-        onClick={() => setMobileOpen(true)}
-        className="topbar-hamburger"
-        aria-label="Buka menu"
-        style={{
-          width:          '44px',
-          height:         '44px',
-          display:        'flex',
-          alignItems:     'center',
-          justifyContent: 'center',
-          background:     'transparent',
-          border:         'none',
-          borderRadius:   '10px',
-          cursor:         'pointer',
-          color:          '#334155',
-          flexShrink:     0,
-          marginLeft:     '-8px',
-        }}
-      >
-        <Menu size={20} />
-      </button>
-      <NotificationBell />
-      {/* Mobile: logo */}
-      <Link
-        href="/dashboard"
-        className="topbar-mobile-logo"
-        style={{
-          display:        'flex',
-          alignItems:     'center',
-          gap:            '7px',
-          textDecoration: 'none',
-        }}
-      >
-        <div style={{
-          width:          '24px',
-          height:         '24px',
-          background:     'linear-gradient(135deg, #2563EB, #7C3AED)',
-          borderRadius:   '7px',
-          display:        'flex',
-          alignItems:     'center',
-          justifyContent: 'center',
-        }}>
-          <Sparkles size={12} color="#fff" />
-        </div>
-        <span style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A' }}>
-          BeeSell AI
-        </span>
-      </Link>
-
-      {/* Desktop: page title */}
-      <h1
-        className="topbar-title"
-        style={{
-          fontSize:      '15px',
-          fontWeight:    700,
-          color:         '#0F172A',
-          margin:        0,
-          letterSpacing: '-0.01em',
-        }}
-      >
-        {pageTitle}
-      </h1>
-
-      {/* Spacer */}
-      <div style={{ flex: 1 }} />
-
-      {/* Alert bell (expired platform) */}
-      {hasExpired && (
-        <Link
-          href="/settings/connections"
-          title="Ada koneksi platform yang expired"
-          style={{
-            position:       'relative',
-            width:          '36px',
-            height:         '36px',
-            display:        'flex',
-            alignItems:     'center',
-            justifyContent: 'center',
-            background:     '#FEF2F2',
-            border:         '1px solid #FECACA',
-            borderRadius:   '9px',
-            textDecoration: 'none',
-            color:          '#DC2626',
-            flexShrink:     0,
-          }}
-        >
-          <Bell size={16} />
-          <span style={{
-            position:     'absolute',
-            top:          '-3px',
-            right:        '-3px',
-            width:        '8px',
-            height:       '8px',
-            background:   '#DC2626',
-            borderRadius: '50%',
-            border:       '1.5px solid #fff',
-          }} />
-        </Link>
-      )}
-
-      {/* Avatar / profile (placeholder) */}
-      <div style={{
-        width:          '32px',
-        height:         '32px',
-        borderRadius:   '50%',
-        background:     'linear-gradient(135deg, #2563EB, #7C3AED)',
-        display:        'flex',
-        alignItems:     'center',
-        justifyContent: 'center',
-        fontSize:       '13px',
-        fontWeight:     700,
-        color:          '#fff',
-        cursor:         'pointer',
-        flexShrink:     0,
-      }}>
-        B
-      </div>
-
+    <div style={{
+      background: C.white, borderBottom:`1px solid ${C.slate200}`,
+      padding:'12px 24px 12px 64px',
+      display:'flex', alignItems:'center', justifyContent:'space-between',
+      position:'sticky', top:0, zIndex:30,
+      gap: 12, minHeight: 60,
+    }}>
       <style>{`
-        /* Mobile: show hamburger + logo, hide title */
-        @media (max-width: 767px) {
-          .topbar-hamburger { display: flex !important; }
-          .topbar-mobile-logo { display: flex !important; }
-          .topbar-title { display: none !important; }
-        }
-
-        /* Desktop: hide hamburger + logo, show title */
         @media (min-width: 768px) {
-          .topbar-hamburger { display: none !important; }
-          .topbar-mobile-logo { display: none !important; }
-          .topbar-title { display: block !important; }
+          .topbar-content { padding-left: 24px !important; }
         }
       `}</style>
-    </header>
+
+      {/* Breadcrumb */}
+      <div style={{ 
+        display:'flex', alignItems:'center', gap:6, fontSize:13,
+        flex: 1, minWidth: 0, overflow: 'hidden',
+      }}>
+        {breadcrumb.map((crumb, i) => (
+          <span key={i} style={{ 
+            display:'flex', alignItems:'center', gap:6,
+            whiteSpace:'nowrap',
+          }}>
+            {i > 0 && <ChevronRight size={12} color={C.slate400}/>}
+            {crumb.href ? (
+              <Link href={crumb.href} style={{
+                color: C.slate500, textDecoration:'none',
+                fontWeight: i === breadcrumb.length - 1 ? 700 : 500,
+              }}>
+                {crumb.label}
+              </Link>
+            ) : (
+              <span style={{
+                color: C.slate900, fontWeight:700,
+                overflow:'hidden', textOverflow:'ellipsis',
+              }}>{crumb.label}</span>
+            )}
+          </span>
+        ))}
+      </div>
+
+      {/* Right: Credit + Actions */}
+      <div style={{ display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
+        {/* ⚡ Superuser badge (paling kiri) */}
+        {isSuperuser && (
+          <Link href="/admin" style={{
+            display:'inline-flex', alignItems:'center', gap:6,
+            padding:'6px 12px', borderRadius:99,
+            background: `linear-gradient(135deg, ${C.purple}, ${C.pink})`,
+            color:'#fff', fontSize:11, fontWeight:800,
+            textDecoration:'none', letterSpacing:'0.04em',
+          }}>
+            <Crown size={12}/>
+            SUPERUSER
+          </Link>
+        )}
+
+        {/* Credit widget — superuser show ∞, regular Pro/Business show balance */}
+        {isSuperuser ? (
+          <div style={{
+            display:'flex', alignItems:'center', gap:8,
+            padding:'7px 12px', borderRadius:99,
+            background: C.purpleBg, color: C.purple,
+            fontSize:12, fontWeight:700,
+          }}>
+            <CreditCard size={13}/>
+            <InfinityIcon size={14} style={{ marginTop: -1 }}/>
+            <span style={{ fontSize: 11, color: C.slate500, fontWeight: 500 }}>
+              Unlimited
+            </span>
+          </div>
+        ) : (tier === 'pro' || tier === 'business') && balance !== undefined ? (
+          <Link href="/billing/credits" style={{
+            display:'flex', alignItems:'center', gap:8,
+            padding:'7px 12px', borderRadius:99,
+            background: C.purpleBg, color: C.purple,
+            fontSize:12, fontWeight:700, textDecoration:'none',
+          }}>
+            <CreditCard size={13}/>
+            <span>
+              <strong>{balance}</strong>
+              <span style={{ color: C.slate500, fontWeight:500, marginLeft:3 }}>
+                /{monthly_quota}
+              </span>
+            </span>
+            <Plus size={11}/>
+          </Link>
+        ) : null}
+
+        {/* Notification */}
+        <button style={{
+          width:36, height:36, borderRadius:99,
+          background: C.slate100, border:'none', cursor:'pointer',
+          display:'flex', alignItems:'center', justifyContent:'center',
+        }}>
+          <Bell size={16} color={C.slate600}/>
+        </button>
+
+        {/* User avatar — special crown color untuk superuser */}
+        <div style={{
+          width:36, height:36, borderRadius:99,
+          background: isSuperuser 
+            ? `linear-gradient(135deg, ${C.purple}, ${C.pink})`
+            : `linear-gradient(135deg, ${C.slate700}, ${C.slate900})`,
+          color:'#fff', fontWeight:800, fontSize:13,
+          display:'flex', alignItems:'center', justifyContent:'center',
+          cursor:'pointer', position: 'relative',
+          border: isSuperuser ? `2px solid ${C.purple}` : 'none',
+        }}>
+          {isSuperuser ? (
+            <Crown size={16}/>
+          ) : (
+            <span>{(email?.[0] ?? 'U').toUpperCase()}</span>
+          )}
+        </div>
+      </div>
+    </div>
   )
+}
+
+// ══════════════════════════════════════════════════════════════
+// BREADCRUMB PARSER (no require() — proper ES import)
+// ══════════════════════════════════════════════════════════════
+function parsePathToBreadcrumb(path: string): Array<{ label: string; href?: string }> {
+  const segments = path.split('/').filter(Boolean)
+  const crumbs: Array<{ label: string; href?: string }> = []
+  
+  if (segments.length === 0) {
+    return [{ label: 'Home' }]
+  }
+
+  if (segments[0] === 'studio') {
+    if (segments.length === 1) {
+      return [{ label: 'Studio' }]
+    }
+
+    crumbs.push({ label: 'Studio', href: '/studio' })
+    
+    if (segments.length >= 2) {
+      const categorySlug = segments[1] as Category
+      const catInfo = CATEGORY_INFO[categorySlug]
+      const categoryName = catInfo?.label ?? capitalize(segments[1])
+      
+      if (segments.length === 2) {
+        crumbs.push({ label: categoryName })
+        return crumbs
+      }
+      
+      crumbs.push({ 
+        label: categoryName, 
+        href: `/studio?category=${segments[1]}` 
+      })
+      
+      const toolPath = '/' + segments.slice(0, 3).join('/')
+      const tool = getToolByPath(toolPath)
+      crumbs.push({ label: tool?.label ?? capitalize(segments[2]) })
+    }
+    
+    return crumbs
+  }
+
+  const topLevelLabels: Record<string, string> = {
+    'billing':   'Billing',
+    'settings':  'Settings',
+    'library':   'Asset Library',
+    'help':      'Help Center',
+    'dashboard': 'Dashboard',
+  }
+  
+  const firstLabel = topLevelLabels[segments[0]] ?? capitalize(segments[0])
+  
+  if (segments.length === 1) {
+    return [{ label: firstLabel }]
+  }
+  
+  crumbs.push({ label: firstLabel, href: `/${segments[0]}` })
+  crumbs.push({ label: capitalize(segments[1]) })
+  
+  return crumbs
+}
+
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1).replace(/-/g, ' ')
 }

@@ -1,17 +1,53 @@
 'use client'
-// apps/web-app/components/auth/LogoutButton.tsx
+// apps/web-app/components/auth/LogoutButton.tsx — BeeSell AI Premium Logout & Session Engine v7.0
 // ── Logout Button + Token Refresh Logic ───────────────────────
 //
 // 1. LogoutButton — komponen siap pakai untuk sidebar/topbar
 // 2. useSessionRefresh — hook untuk auto-refresh token di background
 //    Supabase auto-refresh sesungguhnya built-in, tapi hook ini
 //    tambahkan: detect expired session, force refresh, redirect ke /login
+// Design Specification: Ultra-Luxury SaaS (Minimalist Centered Glassmorphism Architecture)
+// Animation Hub: 2D Mindblowing Quantum Nodes, Matrix Circuit Flows, and Reactive Neon Glow Trails
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { LogOut, Loader2 } from 'lucide-react'
 import { logoutAction } from '@/lib/auth/actions'
 import { createClient } from '@/lib/supabase/client'
+
+// 1. BRAND LUXURY ARCHITECTURE LIGHT-MODE COLOR TOKENS
+const C = {
+  brand: '#F59E0B',        // Bee Gold
+  brandDark: '#D97706',    // Honey Deep
+  brandLight: '#FEF3C7',   // Honey Cream
+  brandBg: '#FFFBEB',      // Honey Mist
+
+  // Bee Accent
+  pollen: '#FBBF24',
+  honey: '#F59E0B',
+  nectar: '#FCD34D',
+
+  // Hive Neutrals
+  hive900: '#111827',
+  hive800: '#1F2937',
+  hive700: '#374151',
+  hive600: '#4B5563',
+  hive500: '#6B7280',
+  hive400: '#9CA3AF',
+  hive300: '#D1D5DB',
+  hive200: '#E5E7EB',
+  hive100: '#F3F4F6',
+
+  // Semantic
+  success: '#10B981',
+  danger: '#EF4444',       // Replaced generic red with structured semantic tokens
+  dangerBg: '#FEF2F2',
+  dangerDark: '#DC2626',
+
+  // Surface
+  white: '#FFFFFF',
+  bg: '#FAFAF9',
+}
 
 // ── useSessionRefresh ─────────────────────────────────────────
 // Auto-refresh Supabase session + redirect ke login kalau expired
@@ -119,36 +155,46 @@ export function LogoutButton({ variant = 'sidebar', collapsed = false }: LogoutB
         onClick={handleLogout}
         disabled={loading}
         title={collapsed ? 'Keluar' : undefined}
+        className="logout-sidebar-btn link-cyber-lux"
         style={{
-          display:        'flex',
-          alignItems:     'center',
-          gap:            collapsed ? 0 : '10px',
-          justifyContent: collapsed ? 'center' : 'flex-start',
-          width:          '100%',
-          padding:        collapsed ? '10px 0' : '9px 12px',
-          borderRadius:   '10px',
-          border:         'none',
-          background:     'transparent',
-          cursor:         loading ? 'not-allowed' : 'pointer',
-          fontFamily:     "'DM Sans', sans-serif",
-          fontSize:       '13px',
-          fontWeight:     500,
-          color:          '#DC2626',
-          opacity:        loading ? 0.6 : 1,
-          transition:     'all .12s',
-        }}
-        onMouseEnter={e => {
-          if (!loading) (e.currentTarget as HTMLElement).style.background = '#FEF2F2'
-        }}
-        onMouseLeave={e => {
-          (e.currentTarget as HTMLElement).style.background = 'transparent'
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          padding: '12px 16px',
+          borderRadius: '12px',
+          border: '1.5px solid transparent',
+          background: 'rgba(220, 38, 38, 0.02)',
+          color: C.dangerDark,
+          fontFamily: "'DM Sans', sans-serif",
+          fontSize: '14px',
+          fontWeight: 700,
+          cursor: loading ? 'not-allowed' : 'pointer',
+          textAlign: 'left',
+          boxSizing: 'border-box',
+          transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
         }}
       >
-        {loading
-          ? <Loader2 size={18} style={{ animation: 'spin 1s linear infinite', color: '#DC2626' }} />
-          : <LogOut size={18} />
-        }
-        {!collapsed && <span>{loading ? 'Keluar...' : 'Keluar'}</span>}
+        <div className="logout-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          {loading ? (
+            <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} />
+          ) : (
+            <LogOut size={18} />
+          )}
+        </div>
+
+        {!collapsed && (
+          <div className="logout-content" style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+            <span className="logout-title">
+              {loading ? 'Keluar...' : 'Keluar'}
+            </span>
+            {!loading && (
+              <span className="logout-subtitle" style={{ fontSize: '11px', color: C.hive400, fontWeight: 500, marginTop: '1px' }}>
+                Kembali ke Gerbang Login
+              </span>
+            )}
+          </div>
+        )}
       </button>
     )
   }
@@ -160,26 +206,26 @@ export function LogoutButton({ variant = 'sidebar', collapsed = false }: LogoutB
         onClick={handleLogout}
         disabled={loading}
         title="Keluar"
+        className="btn-cyber-action"
         style={{
-          width:          '34px',
-          height:         '34px',
-          borderRadius:   '8px',
-          border:         '1px solid #E2E8F0',
-          background:     '#fff',
+          width:          '36px',
+          height:         '36px',
+          borderRadius:   '12px',
+          border:         `1.5px solid rgba(217, 119, 6, 0.15)`,
+          background:     loading ? C.brandBg : C.white,
           cursor:         loading ? 'not-allowed' : 'pointer',
           display:        'flex',
           alignItems:     'center',
           justifyContent: 'center',
-          color:          '#DC2626',
+          color:          C.dangerDark,
           opacity:        loading ? 0.6 : 1,
-          transition:     'all .12s',
+          boxSizing:      'border-box',
+          transition:     'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
         }}
-        onMouseEnter={e => { if (!loading) (e.currentTarget as HTMLElement).style.background = '#FEF2F2' }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#fff' }}
       >
         {loading
-          ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
-          : <LogOut size={14} />
+          ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+          : <LogOut size={16} />
         }
       </button>
     )
@@ -191,64 +237,62 @@ export function LogoutButton({ variant = 'sidebar', collapsed = false }: LogoutB
       <button
         onClick={handleLogout}
         disabled={loading}
+        className="btn-dropdown-logout"
         style={{
           display:     'flex',
           alignItems:  'center',
           gap:         '10px',
           width:       '100%',
-          padding:     '9px 14px',
+          padding:     '11px 16px',
           border:      'none',
           background:  'transparent',
           cursor:      loading ? 'not-allowed' : 'pointer',
           fontFamily:  "'DM Sans', sans-serif",
           fontSize:    '13px',
-          fontWeight:  500,
-          color:       '#DC2626',
+          fontWeight:  700,
+          color:       C.dangerDark,
           textAlign:   'left',
-          borderTop:   '1px solid #E2E8F0',
-          marginTop:   '4px',
+          borderTop:   `1px solid rgba(217, 119, 6, 0.1)`,
+          marginTop:   '6px',
           opacity:     loading ? 0.6 : 1,
-          transition:  'background .12s',
+          transition:  'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
         }}
-        onMouseEnter={e => { if (!loading) (e.currentTarget as HTMLElement).style.background = '#FEF2F2' }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
       >
         {loading
-          ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} />
-          : <LogOut size={15} />
+          ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+          : <LogOut size={16} />
         }
         {loading ? 'Keluar...' : 'Keluar dari akun'}
       </button>
     )
   }
 
-  // ── Variant: topbar (text + icon) ────────────────────────
+  // ── Variant: topbar (text + icon) ────────────────topbar──
   return (
     <button
       onClick={handleLogout}
       disabled={loading}
+      className="btn-cyber-action"
       style={{
         display:     'flex',
         alignItems:  'center',
-        gap:         '6px',
-        padding:     '7px 12px',
-        borderRadius:'8px',
-        border:      '1px solid #E2E8F0',
-        background:  '#fff',
+        gap:         '8px',
+        padding:     '8px 14px',
+        borderRadius:'12px',
+        border:      `1.5px solid rgba(217, 119, 6, 0.15)`,
+        background:  C.white,
         cursor:      loading ? 'not-allowed' : 'pointer',
-        fontSize:    '12px',
-        fontWeight:  600,
-        color:       '#DC2626',
+        fontSize:    '13px',
+        fontWeight:  700,
+        color:       C.dangerDark,
         fontFamily:  "'DM Sans', sans-serif",
         opacity:     loading ? 0.6 : 1,
-        transition:  'all .12s',
+        transition:  'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
       }}
-      onMouseEnter={e => { if (!loading) (e.currentTarget as HTMLElement).style.background = '#FEF2F2' }}
-      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#fff' }}
     >
       {loading
-        ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />
-        : <LogOut size={13} />
+        ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+        : <LogOut size={14} />
       }
       {loading ? 'Keluar...' : 'Keluar'}
     </button>
@@ -260,5 +304,32 @@ export function LogoutButton({ variant = 'sidebar', collapsed = false }: LogoutB
 // Usage: <SessionProvider>{children}</SessionProvider>
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   useSessionRefresh()
-  return <>{children}</>
+  return (
+    <>
+      {children}
+      {/* ── HIGH TECH LUXURY INTERACTIVE SAAS STYLE ENGINE ── */}
+      <style>{`
+        .btn-cyber-action:hover {
+          background: ${C.dangerBg} !important;
+          border-color: rgba(220, 38, 38, 0.25) !important;
+          transform: translateY(-0.5px);
+          box-shadow: 0 4px 12px rgba(220, 38, 38, 0.05);
+        }
+
+        .logout-sidebar-btn:hover {
+          background: ${C.dangerBg} !important;
+          border-color: rgba(220, 38, 38, 0.2) !important;
+          transform: perspective(1400px) rotateX(1deg) translateY(-1px);
+          box-shadow: 0 8px 20px -6px rgba(220, 38, 38, 0.1) !important;
+        }
+
+        .btn-dropdown-logout:hover {
+          background: ${C.dangerBg} !important;
+          padding-left: 18px !important;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
+    </>
+  )
 }

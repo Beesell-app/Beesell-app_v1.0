@@ -59,7 +59,7 @@ export async function resolveAuthContext(): Promise<AuthenticatedContext | null>
     limits: getPlanLimits(plan as any),
     needsWatermark: plan === 'free',
   }
-
+}
 // ── Feature gate ──────────────────────────────────────────────
 export function requireFeature(
   ctx:     AuthenticatedContext,
@@ -241,10 +241,10 @@ export async function rollbackQuota(
   tenant_id: string,
   metric: QuotaMetric,
   amount: number = 1,
-): Promise<void> {
+  ): Promise<void> {
   await refundQuota(
     tenant_id,
     metric as QuotaType,
     amount,
-  )
-}
+    )
+  }

@@ -7,9 +7,9 @@
 //   2. canvas mode    — export dari Fabric/HTMLCanvas
 import { useState, useRef, useEffect } from 'react'
 import { Download, Check, Loader2, ChevronDown, FileImage, Save, Library } from 'lucide-react'
-import { useImageDownload, SIZE_PRESETS } from '@/lib/hooks/useImageDownload'
-import type { DownloadFormat, DownloadSize } from '@/lib/hooks/useImageDownload'
-import { useSaveUrlToLibrary, useSaveBlobToLibrary } from '@/lib/hooks/useSaveToLibrary'
+import { useImageDownload, SIZE_PRESETS } from '@/hooks/useImageDownload'
+import type { DownloadFormat, DownloadSize } from '@/hooks/useImageDownload'
+import { useSaveUrlToLibrary, useSaveBlobToLibrary } from '@/hooks/useSaveToLibrary'
 
 interface Props {
   // Source — provide ONE of these:

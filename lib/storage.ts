@@ -8,7 +8,7 @@ const SUPABASE_URL              = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-  auth: { persistSession: false, autorefresh_token: false },
+  auth: { persistSession: false, autoRefreshToken: false },
 })
 
 const BUCKET_NAME = 'content-media'
@@ -38,9 +38,9 @@ export async function downloadAndUpload(params: {
   const { error } = await supabaseAdmin.storage
     .from(BUCKET_NAME)
     .upload(storagePath, buffer, {
-      contentType,
+      contentType:  'image/png',
       cacheControl: 'public, max-age=31536000, immutable',
-      upsert: false,
+      upsert: true,
     })
 
   if (error) {
@@ -85,7 +85,7 @@ export async function uploadBuffer(params: {
     .upload(storagePath, uploadData, {
       contentType:  params.contentType,
       cacheControl: 'public, max-age=31536000, immutable',
-      upsert:       false,
+      upsert:       true,
     })
 
   if (error) {

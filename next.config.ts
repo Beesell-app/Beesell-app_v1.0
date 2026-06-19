@@ -6,7 +6,9 @@ import type { NextConfig } from 'next'
 import { withSentryConfig } from '@sentry/nextjs'
 // Bundle analyzer — activated via ANALYZE=true npm run build
 // ... (existing nextConfig object stays the same) ...
- 
+import path from "path";
+
+
 const sentryOptions = {
   // Sentry org/project from dashboard
   org:     process.env.SENTRY_ORG,
@@ -25,10 +27,15 @@ const sentryOptions = {
   },
  
   // Automatically tree-shake Sentry debug code in production
-  disableLogger: true,
+  webpack: {
+  treeshake: {
+    removeDebugLogging: true,
+  },
+  
+},
  
   // Tunnel Sentry requests through own domain (bypass ad-blockers)
-  tunnelRoute: '/api/monitoring',
+  // tunnelRoute: '/api/monitoring',
  
   // Wrap API routes with Sentry for server-side error capture
   autoInstrumentServerFunctions: true,
@@ -60,11 +67,11 @@ const nextConfig: NextConfig = {
 
   // ── Output ─────────────────────────────────────────────────
   output: 'standalone',    // for Docker/Vercel optimized output
-
+  
   // ── React ──────────────────────────────────────────────────
   reactStrictMode: true,
 
-  
+  outputFileTracingRoot: path.join(__dirname, "../../"),
  
 
   // ── Turbopack (default in Next 15+) ────────────────────────
@@ -87,7 +94,7 @@ const nextConfig: NextConfig = {
     // Device breakpoints for srcSet generation
     deviceSizes:      [390, 640, 768, 1024, 1280, 1536, 1920],
     imageSizes:       [16, 32, 64, 96, 128, 256, 384],
-
+    
     // Supabase Storage
     // Replicate (generated images)
     // Meta (Instagram avatars)
@@ -97,7 +104,11 @@ const nextConfig: NextConfig = {
       // Supabase Storage (tenant media)
       { protocol: 'https', hostname: '*.supabase.co',         pathname: '/storage/v1/object/**' },
       { protocol: 'https', hostname: '*.supabase.in',         pathname: '/storage/v1/object/**' },
-
+      {
+        protocol: 'https',
+        hostname: 'GANTI-DENGAN-REF.supabase.co',   // ambil dari NEXT_PUBLIC_SUPABASE_URL kamu
+        pathname: '/storage/v1/object/public/**',
+      },
       // Replicate (AI generated images, webhook download)
       { protocol: 'https', hostname: 'replicate.delivery' },
       { protocol: 'https', hostname: '*.replicate.delivery' },

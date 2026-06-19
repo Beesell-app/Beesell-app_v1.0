@@ -81,7 +81,7 @@ export async function GET(req: Request) {
     // ── 6. Encrypt tokens ─────────────────────────────────────
     const encrypted = encryptTokenBundle({
       access_token:  tokens.accessToken,
-      refresh_token: tokens.refresh_token: ?? null,
+      refresh_token: tokens.refresh_token ?? null,
       expiresAt:    tokens.expiresAt    ?? null,
       scope:        tokens.scope        ?? null,
     })

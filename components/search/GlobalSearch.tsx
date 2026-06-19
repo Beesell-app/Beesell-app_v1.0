@@ -8,7 +8,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter }          from 'next/navigation'
 import { Search, X, Loader2, ArrowRight, FileText, Image, Video, Clock } from 'lucide-react'
-import { useSearch, useIsSearching } from '@/lib/hooks/useSearch'
+import { useSearch, useIsSearching } from '@/hooks/useSearch'
 import { SearchHighlight, MatchBadge } from './SearchHighlight'
 
 // ── Trigger: button to open (put in TopBar) ───────────────────

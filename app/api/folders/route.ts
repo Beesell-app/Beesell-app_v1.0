@@ -52,19 +52,24 @@ export async function GET() {
 
     // Get content count per folder (single query)
     const contentCounts = await db.content.groupBy({
-      by:      ['folderId'],
+      by: ['folder_id'],
+
       where: {
-        tenant_id:  auth.tenant_id,
+        tenant_id: auth.tenant_id,
         deleted_at: null,
-        folderId:  { not: null },
+        folder_id: { not: null },
       },
-      _count:  { _all: true },
+
+      _count: {
+        _all: true,
+      },
     })
 
     const countMap = new Map<string, number>()
     contentCounts.forEach(c => {
-      if (c.folderId) countMap.set(c.folderId, c._count._all)
-    })
+      if (c.folder_id) {
+      countMap.set(c.folder_id, c._count._all)
+    }})
 
     // Build tree structure
     const folderMap = new Map<string, Folder & { children: Folder[] }>()
@@ -99,9 +104,9 @@ export async function GET() {
     // Get root content count (folder_id IS NULL)
     const rootContentCount = await db.content.count({
       where: {
-        tenant_id:  auth.tenant_id,
+        tenant_id: auth.tenant_id,
         deleted_at: null,
-        folderId:  null,
+        folder_id: null,
       },
     })
 

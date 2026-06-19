@@ -1,7 +1,7 @@
 'use client'
 // apps/web-app/components/brand-kit/BrandKitPreview.tsx
 // Mini preview card — shows how the brand kit looks applied
-import type { BrandKit } from '@/lib/hooks/useBrandKit'
+import type { BrandKit } from '@/hooks/useBrandKit'
 
 interface Props {
   kit:   BrandKit

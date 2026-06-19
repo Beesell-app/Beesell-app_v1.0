@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import type { CaptionVariant } from '@/lib/ai/prompts'
 import { HashtagChips }      from './HashtagChips'
-import { useAutoSaveContent, type SaveStatus } from '@/lib/hooks/useAutoSaveContent'
+import { useAutoSaveContent, type SaveStatus } from '@/hooks/useAutoSaveContent'
 
 interface Props {
   isStreaming: boolean

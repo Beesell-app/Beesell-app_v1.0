@@ -163,7 +163,7 @@ Format: JSON singkat {"description":"...","colors":["warna1","warna2"],"mood":".
           },
         ],
       }],
-      maxTokens: 300,
+      maxOutputTokens: 300,
     })
     return text
   } catch {
@@ -274,13 +274,14 @@ export async function POST(req: Request) {
 
     // Get user + tenant + AI Memory
     const dbUser = await db.user.findUnique({
-      where:  { id: user.id },
+      where: { id: user.id },
       select: {
-        tenantId: true,
-        tenant: {
+        tenant_id: true,
+        tenants: {
           select: {
-            plan:true, name:true,
-            aiMemory: true,
+            plan: true,
+            name: true,
+            ai_memory: true,
             settings: true,
           },
         },
@@ -288,12 +289,12 @@ export async function POST(req: Request) {
     })
     if (!dbUser) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
-    const { tenantId } = dbUser
-    const aiMem = (dbUser.tenant.aiMemory as any) ?? {}
-    const s     = (dbUser.tenant.settings  as any) ?? {}
-
+    const { tenant_id } = dbUser
+    const aiMem = (dbUser.tenants?.ai_memory as any) ?? {}
+    const s     = (dbUser.tenants?.settings as any) ?? {}
+    const brandName = dbUser.tenants?.name ?? ''
     // ── Quota check ──────────────────────────────────────────
-    const quota = await decrementQuota(tenantId, 'content', 1)
+    const quota = await decrementQuota(tenant_id, 'content', 1)
     if (!quota.success) {
       return NextResponse.json({
         error:   quota.reason === 'daily' ? 'DAILY_QUOTA_EXCEEDED' : 'MONTHLY_QUOTA_EXCEEDED',
@@ -310,7 +311,7 @@ export async function POST(req: Request) {
     const visual   = aiMem.visual   ?? {}
 
     const brandIdentity: CaptionConfig['brandIdentity'] = {
-      name:        dbUser.tenant.name ?? '',
+      name:        dbUser.tenants.name ?? '',
       tagline:     visual.brandTagline ?? s.brandTagline ?? '',
       primaryColor:visual.primaryColor ?? s.primaryColor ?? '#2563EB',
       personality: voice.tone ?? s.defaultTone ?? 'casual',
@@ -403,7 +404,7 @@ export async function POST(req: Request) {
       system:      CAPTION_SYSTEM_PROMPT,
       prompt,
       temperature: 0.88,
-      maxTokens:   2400,
+      maxOutputTokens:   2400,
     })
 
     // ── Parse output ──────────────────────────────────────────
@@ -420,7 +421,7 @@ export async function POST(req: Request) {
     try {
       await db.content.create({
         data: {
-          tenantId,
+          tenant_id,
           userId:          user.id,
           type:            'caption',
           engine:          d.engine,

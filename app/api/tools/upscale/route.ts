@@ -1,257 +1,99 @@
 // app/api/tools/upscale/route.ts
-// ── Quick Tools: AI Upscale ───────────────────────────────────
-//
-// Model: Real-ESRGAN via Replicate (nightmareai/real-esrgan)
-//   - 2x: Foto jadi 2x resolusi asli
-//   - 4x: Foto jadi 4x resolusi → 1080p foto jadi 4320p (4K)
-//
-// Use case:
-//   - Foto produk kamera HP low-res → jadi HD/4K untuk marketplace
-//   - Foto blur/kecil → ditajamkan + diperbesar
-//   - Screenshot produk → diupscale untuk print/banner
-//
-// Cost: ~$0.002–0.005 per image (Replicate pay-per-second GPU)
-// Env: REPLICATE_API_TOKEN (sudah ada di .env.local)
+// ── Quick Tools: AI Upscale (Replicate Real-ESRGAN) ───────────
+// POST multipart: { image: File, option: 2x|4x|2x-face|4x-denoise }
+// Returns: upscaled image binary (JPEG)
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { predict, toDataUri, getOutputUrl, fetchImage } from '@/lib/replicate'
+import sharp from 'sharp'
+import { enforceToolAccess, consumeCredits, logToolUsage } from '@/lib/tools/enforce'
 
 export const runtime     = 'nodejs'
 export const dynamic     = 'force-dynamic'
-export const maxDuration = 120  // 4x bisa butuh sampai 2 menit untuk gambar besar
+export const maxDuration = 180
 
-const MAX_SIZE_BYTES = 10 * 1024 * 1024  // 10 MB
-const ALLOWED_TYPES  = new Set(['image/jpeg','image/jpg','image/png','image/webp'])
+// Real-ESRGAN by nightmareai
+const MODEL_VERSION = 'philz1337x/clarity-pro-upscaler'
 
-// ── Replicate model versions ──────────────────────────────────
-// Real-ESRGAN: best untuk product photos (no face enhancement)
-// Latest stable version per 2024
-const MODELS = {
-  'real-esrgan': 'nightmareai/real-esrgan:42fed1c4974146d4d2414e2be2c5277c7fcf05fcc3a73abf41610695738c1d7b',
-} as const
+const MAX_SIZE = 10 * 1024 * 1024
+const ALLOWED  = ['image/jpeg','image/jpg','image/png','image/webp']
 
-// ── Scale options & their expected output ─────────────────────
-const SCALE_OPTIONS = {
-  2: { label: '2× HD',  desc: '2x resolusi — cepat & bagus',   gpuSec: 5  },
-  4: { label: '4× 4K',  desc: '4x resolusi — kualitas terbaik', gpuSec: 15 },
-} as const
-
-// ── Helpers ───────────────────────────────────────────────────
-function toDataUrl(buffer: Buffer, mimeType: string): string {
-  return `data:${mimeType};base64,${buffer.toString('base64')}`
+interface UpscaleConfig {
+  scale_factor: 2 | 4
+  creativity: number
+  allowProduct?: boolean
 }
 
-async function sleep(ms: number) {
-  return new Promise(r => setTimeout(r, ms))
+const PRESETS: Record<string, UpscaleConfig> = {
+  '2x':        { scale_factor: 2, creativity: 1, allowProduct: true },
+  '4x':        { scale_factor: 4, creativity: 1, allowProduct: true },
+
+  '2x-sharp':  { scale_factor: 2, creativity: 3, allowProduct: false },
+  '4x-sharp':  { scale_factor: 4, creativity: 3, allowProduct: false },
+
+  'creative':  { scale_factor: 4, creativity: 5, allowProduct: false },
 }
 
-// Poll Replicate prediction until done or timeout
-async function pollPrediction(
-  predId:       string,
-  apiKey:       string,
-  timeoutMs:    number = 100_000,
-  intervalMs:   number = 2_500,
-): Promise<string> {
-  const url      = `https://api.replicate.com/v1/predictions/${predId}`
-  const deadline = Date.now() + timeoutMs
-
-  while (Date.now() < deadline) {
-    await sleep(intervalMs)
-
-    const res  = await fetch(url, {
-      headers: { Authorization: `Token ${apiKey}` },
-    })
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => '')
-      throw new Error(`Replicate poll error ${res.status}: ${text}`)
-    }
-
-    const data = await res.json()
-
-    if (data.status === 'succeeded') {
-      const out = Array.isArray(data.output) ? data.output[0] : data.output
-      if (!out) throw new Error('Replicate succeeded tapi output kosong.')
-      return out as string
-    }
-
-    if (data.status === 'failed') {
-      throw new Error(data.error ?? 'Replicate: proses gagal.')
-    }
-
-    if (data.status === 'canceled') {
-      throw new Error('Replicate: proses dibatalkan.')
-    }
-
-    // status: 'starting' | 'processing' → continue polling
-  }
-
-  throw new Error('Timeout: upscale melebihi batas waktu. Coba gambar lebih kecil.')
-}
-
-// ── POST Handler ──────────────────────────────────────────────
 export async function POST(req: Request) {
-  const startTime = Date.now()
-
   try {
-    // ── 1. Auth ────────────────────────────────────────────────
     const supabase = await createClient()
-    const { data: { user }, error: authErr } = await supabase.auth.getUser()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error:'Unauthorized' }, { status:401 })
 
-    if (authErr || !user) {
-      return NextResponse.json({
-        error:   'Unauthorized',
-        message: 'Silakan login terlebih dahulu.',
-      }, { status: 401 })
-    }
-
-    // ── 2. Check Replicate API key ─────────────────────────────
-    const replicateKey = process.env.REPLICATE_API_TOKEN
-    if (!replicateKey || replicateKey.length < 10) {
-      return NextResponse.json({
-        error:   'CONFIG_ERROR',
-        message: 'REPLICATE_API_TOKEN belum dikonfigurasi di .env.local',
-      }, { status: 500 })
-    }
-
-    // ── 3. Parse FormData ──────────────────────────────────────
-    let fd: FormData
-    try { fd = await req.formData() }
-    catch {
-      return NextResponse.json({
-        error: 'INVALID_FORM', message: 'Format request tidak valid.',
-      }, { status: 400 })
-    }
-
+    const fd = await req.formData()
     const imageFile = fd.get('image') as File | null
-    const scaleStr  = (fd.get('option') as string | null) ?? '4'
-    const scale     = parseInt(scaleStr)
-
-    // ── 4. Validate ────────────────────────────────────────────
-    if (!imageFile || !(imageFile instanceof File)) {
-      return NextResponse.json({ error: 'NO_FILE', message: 'File gambar tidak ditemukan.' }, { status: 400 })
+    const option    = (fd.get('option') as string) ?? '2x'
+    const enforce = await enforceToolAccess(supabase, user.id, 'upscale')
+    if (!enforce.allowed) {
+      return NextResponse.json({ error:'ACCESS_DENIED', message:enforce.reason }, { status:enforce.status })
     }
+    const startTime = Date.now()
+    if (!imageFile) return NextResponse.json({ error:'NO_FILE', message:'Upload gambar dulu.' }, { status:400 })
+    if (!ALLOWED.includes(imageFile.type)) return NextResponse.json({ error:'INVALID_TYPE', message:'Format harus JPG, PNG, atau WebP.' }, { status:400 })
+    if (imageFile.size > MAX_SIZE) return NextResponse.json({ error:'FILE_TOO_LARGE', message:'Maksimal 10MB.' }, { status:400 })
 
-    if (!ALLOWED_TYPES.has(imageFile.type)) {
-      return NextResponse.json({
-        error:   'INVALID_TYPE',
-        message: `Format tidak didukung: ${imageFile.type}. Gunakan JPG, PNG, atau WebP.`,
-      }, { status: 400 })
-    }
-
-    if (imageFile.size > MAX_SIZE_BYTES) {
-      return NextResponse.json({
-        error:   'FILE_TOO_LARGE',
-        message: `File terlalu besar (${(imageFile.size/1024/1024).toFixed(1)}MB). Maksimal 10MB.`,
-      }, { status: 400 })
-    }
-
-    if (imageFile.size < 500) {
-      return NextResponse.json({ error: 'FILE_TOO_SMALL', message: 'File terlalu kecil.' }, { status: 400 })
-    }
-
-    if (![2, 4].includes(scale)) {
-      return NextResponse.json({
-        error: 'INVALID_SCALE', message: 'Scale harus 2 atau 4.',
-      }, { status: 400 })
-    }
-
-    // ── 5. Read buffer + estimate dimensions ───────────────────
-    const inputBuffer  = Buffer.from(await imageFile.arrayBuffer())
-    const inputSizeKB  = Math.round(inputBuffer.length / 1024)
-    const dataUrl      = toDataUrl(inputBuffer, imageFile.type)
-
-    console.log(`[upscale] START user:${user.id} scale:${scale}x size:${inputSizeKB}KB type:${imageFile.type}`)
-
-    // ── 6. Create Replicate prediction ────────────────────────
-    const createRes = await fetch('https://api.replicate.com/v1/predictions', {
-      method:  'POST',
-      headers: {
-        Authorization:  `Token ${replicateKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        version: MODELS['real-esrgan'],
-        input: {
-          image:        dataUrl,
-          scale,
-          face_enhance: false,  // false = product/object mode (lebih akurat untuk produk)
+    const config = PRESETS[option] ?? PRESETS['2x']
+    
+    // Guard untuk foto produk
+    if (config.allowProduct === false) {
+      return NextResponse.json(
+        {
+          error: 'INVALID_OPTION',
+          message: 'Mode ini tidak tersedia untuk foto produk.',
         },
-      }),
-    })
-
-    if (!createRes.ok) {
-      const errBody = await createRes.json().catch(() => ({}))
-      const msg     = errBody.detail ?? errBody.error ?? `Replicate error ${createRes.status}`
-      console.error('[upscale] create prediction failed:', msg)
-
-      if (createRes.status === 401) {
-        return NextResponse.json({
-          error: 'INVALID_API_KEY',
-          message: 'REPLICATE_API_TOKEN tidak valid. Cek di replicate.com/account/api-tokens',
-        }, { status: 500 })
-      }
-
-      return NextResponse.json({ error: 'REPLICATE_ERROR', message: msg }, { status: 502 })
-    }
-
-    const prediction = await createRes.json()
-    const predId     = prediction.id as string
-
-    console.log(`[upscale] prediction created: ${predId}`)
-
-    // ── 7. Poll until done ─────────────────────────────────────
-    let outputUrl: string
-    try {
-      outputUrl = await pollPrediction(
-        predId,
-        replicateKey,
-        110_000,   // 110s timeout
-        scale === 4 ? 3000 : 2000,  // 4x lebih lama → poll lebih jarang
+        { status: 400 }
       )
-    } catch (pollErr: any) {
-      console.error('[upscale] poll failed:', pollErr.message)
-      return NextResponse.json({
-        error:   'UPSCALE_FAILED',
-        message: pollErr.message ?? 'Upscale gagal. Coba dengan gambar lebih kecil.',
-      }, { status: 500 })
     }
+    const buffer = Buffer.from(await imageFile.arrayBuffer())
+    const dataUri = await toDataUri(buffer, imageFile.type)
 
-    // ── 8. Download result from Replicate CDN ──────────────────
-    const dlRes = await fetch(outputUrl)
-    if (!dlRes.ok) {
-      throw new Error(`Gagal mengambil hasil dari Replicate: ${dlRes.status}`)
-    }
+    const pred = await predict(MODEL_VERSION, {
+      image: dataUri,
+      scale_factor: config.scale_factor,
+      creativity: config.creativity,
+      output_format: 'png',
+    })
+    const resultUrl = getOutputUrl(pred)
+    const { buffer: resultBuf, contentType } = await fetchImage(resultUrl)
 
-    const outputBuffer = Buffer.from(await dlRes.arrayBuffer())
-    const outputType   = dlRes.headers.get('content-type') ?? 'image/png'
-    const outputSizeKB = Math.round(outputBuffer.length / 1024)
-    const elapsedSec   = ((Date.now() - startTime) / 1000).toFixed(1)
-
-    console.log(`[upscale] SUCCESS ${scale}x | ${inputSizeKB}KB → ${outputSizeKB}KB | ${elapsedSec}s`)
-
-    // ── 9. Return binary image ─────────────────────────────────
-    // Return langsung sebagai binary — client buat Blob URL
-    return new NextResponse(outputBuffer, {
-      status: 200,
+    console.log('[tools/upscale] ok:', option, `${config.scale_factor}x`, `${(resultBuf.length/1024).toFixed(0)}KB`)
+    if (!enforce.isSuperuser && enforce.creditCost > 0) {
+          await consumeCredits(supabase, user.id, 'upscale', enforce.creditCost, { description:`Upscale ${option}` })
+        }
+    await logToolUsage(supabase, user.id, 'upscale', 'replicate', 0.005, Date.now() - startTime)
+    return new NextResponse(resultBuf as any, {
       headers: {
-        'Content-Type':        outputType,
-        'Content-Disposition': `attachment; filename="beesell-${scale}x-hd-${Date.now()}.png"`,
-        'Cache-Control':       'no-store',
-        // Metadata untuk client
-        'X-Scale':             String(scale),
-        'X-Input-Size-KB':     String(inputSizeKB),
-        'X-Output-Size-KB':    String(outputSizeKB),
-        'X-Process-Time-Sec':  elapsedSec,
+        'Content-Type': contentType,
+        'X-Scale': String(config.scale_factor),
+        'X-Creativity': String(config.creativity),
+        'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff',
       },
     })
 
   } catch (err: any) {
-    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
-    console.error(`[POST /api/tools/upscale] ${elapsed}s`, err?.message)
-    return NextResponse.json({
-      error:   'INTERNAL',
-      message: err?.message ?? 'Terjadi kesalahan server.',
-    }, { status: 500 })
+    console.error('[POST /api/tools/upscale]', err?.message)
+    return NextResponse.json({ error:'PROCESSING_ERROR', message: err?.message ?? 'Gagal upscale gambar.' }, { status:500 })
   }
 }

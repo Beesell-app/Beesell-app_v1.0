@@ -306,14 +306,14 @@ export async function POST(req: Request) {
     // Get tenant
     const dbUser = await db.user.findUnique({
       where:  { id: user.id },
-      select: { tenantId: true, tenant: { select: { plan:true, name:true, niche:true } } },
+      select: { tenant_id: true, tenant: { select: { plan:true, name:true, niche:true } } },
     })
     if (!dbUser) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-    const { tenantId } = dbUser
+    const { tenant_id } = dbUser
 
     // Quota check (caption = 1 per generate)
-    const quotaResult = await decrementQuota(tenantId, 'content', 1)
+    const quotaResult = await decrementQuota(tenant_id, 'content', 1)
     if (!quotaResult.success) {
       return NextResponse.json({
         error:   quotaResult.reason === 'daily'   ? 'DAILY_QUOTA_EXCEEDED'
@@ -329,8 +329,8 @@ export async function POST(req: Request) {
     const systemPrompt  = buildSystemPrompt()
     const enginePrompt  = buildEnginePrompt({
       ...d,
-      storeName: d.storeName ?? dbUser.tenant.name ?? undefined,
-      niche:     d.niche     ?? dbUser.tenant.niche ?? undefined,
+      storeName: d.storeName ?? dbUser.tenants?.name ?? undefined,
+      niche:     d.niche     ?? dbUser.tenants?.niche ?? undefined,
     })
 
     const { text } = await generateText({
@@ -338,7 +338,7 @@ export async function POST(req: Request) {
       system:      systemPrompt,
       prompt:      enginePrompt,
       temperature: 0.85,
-      maxTokens:   1800,
+      maxOutputTokens:   1800,
     })
 
     const result = parseResponse(d.engine, text)
@@ -354,7 +354,7 @@ export async function POST(req: Request) {
     try {
       await db.content.create({
         data: {
-          tenantId,
+          tenant_id,
           userId:      user.id,
           type:        'caption',
           engine:      d.engine,

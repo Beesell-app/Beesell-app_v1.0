@@ -202,8 +202,8 @@ export async function DELETE(
 
       // Move contents ke parent folder (atau root)
       db.content.updateMany({
-        where: { folderId: id },
-        data:  { folderId: folder.parentId },
+        where: { folder_id: id },
+        data:  { folder_id: folder.parentId },
       }),
 
       // Delete the folder

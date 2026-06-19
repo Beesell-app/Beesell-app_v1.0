@@ -22,21 +22,48 @@ import { QuickAddPopover }  from '@/components/scheduler/QuickAddPopover'
 import {
   useWeekEvents, useScheduleContent,
   useRescheduleContent, useUnscheduleContent,
-} from '@/lib/hooks/useScheduler'
+} from '@/hooks/useScheduler'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import {
   getWeekRange, weekLabel, topPxToTime,
 } from '@/lib/scheduler/utils'
 import {
-  PLATFORM_META, type CalendarEvent, type ScheduleSlot, type DragPayload,
-  Platform,
+  SCHEDULE_PLATFORMS,
+  type SchedulePlatformId,
 } from '@/lib/scheduler/types'
+
+// Local drag payload type (not exported from types module)
+type DragPayload =
+  | {
+      type: 'library_item'
+      contentId: string
+      title?: string | null
+      platform?: SchedulePlatformId | string
+      imageUrl?: string | null
+      caption?: string | null
+    }
+  | {
+      type: 'calendar_event'
+      eventId: string
+      title?: string | null
+      platform?: SchedulePlatformId | string
+    }
+
+type ScheduleSlot = {
+  date: Date
+  dayIndex: number
+  hour: number
+}
+
+const PLATFORM_META = Object.fromEntries(
+  SCHEDULE_PLATFORMS.map((platform) => [platform.id, platform]),
+) as Record<SchedulePlatformId, (typeof SCHEDULE_PLATFORMS)[number]>
 
 // ── Library item (draggable from sidebar) ───────────────────────
 function LibraryDraggable({ item }: {
   item: {
-    id: string; type: string; title: string | null; caption_text: string | null;
-    media_url: string | null; primary_platform: string | null;
+    id: string; type: string; title: string | null; captionText: string | null;
+    imageUrl: string | null; primaryPlatform: string | null;
   }
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -44,15 +71,15 @@ function LibraryDraggable({ item }: {
     data: {
       type:      'library_item',
       contentId: item.id,
-      title:     item.title || item.caption_text?.slice(0, 40) || 'Untitled',
-      platform: (item.primary_platform as Platform) ?? 'instagram',
-      media_url:  item.media_url,
-      caption:   item.caption_text?.slice(0, 80),
+      title:     item.title || item.captionText?.slice(0, 40) || 'Untitled',
+      platform:  item.primaryPlatform ?? 'instagram',
+      imageUrl:  item.imageUrl,
+      caption:   item.captionText?.slice(0, 80),
     } satisfies DragPayload,
   })
 
-  const pm    = PLATFORM_META[item.primary_platform as keyof typeof PLATFORM_META]
-  const title = item.title || item.caption_text?.slice(0, 40) || 'Untitled'
+  const pm    = PLATFORM_META[item.primaryPlatform as keyof typeof PLATFORM_META]
+  const title = item.title || item.captionText?.slice(0, 40) || 'Untitled'
 
   return (
     <div
@@ -75,11 +102,11 @@ function LibraryDraggable({ item }: {
       {...attributes}
     >
       <GripVertical size={12} color="#CBD5E1" />
-      {item.media_url
-        ? <img src={item.media_url} alt="" style={{ width: '28px', height: '28px', objectFit: 'cover', borderRadius: '5px', flexShrink: 0 }} />
+      {item.imageUrl
+        ? <img src={item.imageUrl} alt="" style={{ width: '28px', height: '28px', objectFit: 'cover', borderRadius: '5px', flexShrink: 0 }} />
         : <div style={{
             width: '28px', height: '28px', borderRadius: '5px',
-            background: pm?.bg ?? '#F1F5F9', display: 'flex', alignItems: 'center',
+            background: pm?.colorLt ?? '#F1F5F9', display: 'flex', alignItems: 'center',
             justifyContent: 'center', flexShrink: 0,
           }}>
             {item.type === 'image' ? <ImageIcon size={12} color={pm?.color} /> : <FileText size={12} color={pm?.color} />}
@@ -129,10 +156,13 @@ export default function SchedulerPage() {
       return (await res.json()).data
     },
     initialPageParam: undefined,
-    getNextPageParam: (last: any) => last.nextCursor,
+    getNextPageParam: (last) => last?.nextCursor ?? undefined,
     staleTime: 60_000,
   })
-  const libItems = libData?.pages.flatMap((p: any) => p.items) ?? []
+  const libItems =
+  libData?.pages
+    ?.filter(Boolean)
+    .flatMap((p: any) => p.items ?? []) ?? []
 
   // ── dnd-kit sensors ──────────────────────────────────────
   const sensors = useSensors(
@@ -186,7 +216,7 @@ export default function SchedulerPage() {
   const goToday  = () => setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))
 
   const isCurrentWeek = weekRange.days.some(
-    d => d.toDateString() === new Date().toDateString(),
+    (d: Date) => d.toDateString() === new Date().toDateString(),
   )
 
   return (
@@ -363,7 +393,7 @@ export default function SchedulerPage() {
             gap:          '6px',
           }}>
             <span>{PLATFORM_META[draggingPayload.platform as keyof typeof PLATFORM_META]?.icon}</span>
-            {draggingPayload.title.slice(0, 30)}
+            {(draggingPayload.title ?? 'Untitled').slice(0, 30)}
           </div>
         )}
       </DragOverlay>

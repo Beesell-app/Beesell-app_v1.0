@@ -12,8 +12,7 @@ if (!Sentry.getClient()) {
     environment:
       process.env.NODE_ENV,
 
-    enabled:
-      process.env.NODE_ENV === 'production',
+    enabled: process.env.NODE_ENV === 'production',
 
     tracesSampleRate: 1.0,
 
@@ -36,7 +35,7 @@ if (!Sentry.getClient()) {
       if (event.request?.headers) {
 
         delete event.request.headers.Authorization
-        delete event.request.headers.Cookie
+        if (process.env.NODE_ENV === 'production') delete event.request.headers.Cookie
       }
 
       return event

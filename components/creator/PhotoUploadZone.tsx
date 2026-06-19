@@ -4,7 +4,7 @@
 // Replace PhotoInputPanel lama yang masih placeholder
 import { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { useUploadPhoto } from '@/lib/hooks/useUploadPhoto'
+import { useUploadPhoto } from '@/hooks/useUploadPhoto'
 import { useTenant } from '@/store/sessionStore'
 import {
   Upload, Image as ImageIcon, X, Loader2, Sparkles,

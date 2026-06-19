@@ -21,13 +21,13 @@ export function createAdminClient() {
   if (!url || !key) {
     throw new Error(
       'Missing env vars: NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY. ' +
-      'Add SUPABASE_SERVICE_ROLE_KEY to .env.local from Supabase → Project Settings → API → service_role key.'
+      'Add SUPABASE_SERVICE_ROLE_KEY to .env from Supabase → Project Settings → API → service_role key.'
     )
   }
 
   adminClient = createClient(url, key, {
     auth: {
-      autorefresh_token:    false,
+      autoRefreshToken:    false,
       persistSession:      false,
       detectSessionInUrl:  false,
     },

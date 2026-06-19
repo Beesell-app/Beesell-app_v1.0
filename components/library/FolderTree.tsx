@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import {
   useFolders, useUpdateFolder, useDeleteFolder, useMoveContent,
-} from '@/lib/hooks/useFolders'
+} from '@/hooks/useFolders'
 import type { Folder, DragData, DropData } from '@/lib/folder-types'
 import { FOLDER_COLORS } from '@/lib/folder-types'
 import { CreateFolderDialog } from './CreateFolderDialog'

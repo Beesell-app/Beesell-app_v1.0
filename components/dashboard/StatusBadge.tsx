@@ -11,7 +11,7 @@
 // - Graceful fallback
 // - Reusable across dashboard/library/jobs
 
-import type { ContentStatus } from '@prisma/client'
+import type { content_status } from '@prisma/client'
 
 type BadgeSize = 'sm' | 'md'
 
@@ -74,7 +74,7 @@ const STATUS_CONFIG: Record<string, StatusConfig> = {
 }
 
 interface Props {
-  status: ContentStatus | string
+  status: content_status | string
   size?: BadgeSize
 
   /**

@@ -8,8 +8,8 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Sparkles, ChevronDown, ChevronUp, Settings, Check, X } from 'lucide-react'
 import { useContentCreatorStore }  from '@/store/contentCreatorStore'
-import { useBrandKitList, useDefaultBrandKit } from '@/lib/hooks/useBrandKit'
-import type { BrandKit } from '@/lib/hooks/useBrandKit'
+import { useBrandKitList, useDefaultBrandKit } from '@/hooks/useBrandKit'
+import type { BrandKit } from '@/hooks/useBrandKit'
 import { BrandKitPreview } from './BrandKitPreview'
 
 export function BrandKitSelector() {

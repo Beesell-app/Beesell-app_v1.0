@@ -16,8 +16,7 @@ import { verifyQStashSignature } from '@/lib/qstash'
 import { buildImagePrompt, createImagePrediction } from '@/lib/replicate'
 import { refundQuota } from '@/lib/quota/quota-service'
 import { markFailed }  from '@/lib/content/content-service'
-import { withQuotaCheck } from '@/lib/middleware/plan-check'
-import { requireFeature } from '@/lib/middleware/plan-check'
+import { withQuotaCheck, requireFeature } from '@/lib/middleware/plan-check'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -114,7 +113,7 @@ export async function POST(req: Request) {
       where: { id: jobId },
       data: {
         // Pakai outputData untuk track replicate prediction
-        outputData: {
+        output_data: {
           predictionId,
           prompt,
           negativePrompt,

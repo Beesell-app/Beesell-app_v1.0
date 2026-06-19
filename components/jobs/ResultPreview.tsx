@@ -7,7 +7,7 @@ import {
   Download, Copy, Check, ExternalLink, ZoomIn, X,
   Hash, ChevronLeft, ChevronRight,
 } from 'lucide-react'
-import type { JobResult } from '@/lib/hooks/useJobStatus'
+import type { JobResult } from '@/hooks/useJobStatus'
 import { DownloadButton } from '@/components/jobs/DownloadButton'
 
 interface Props {

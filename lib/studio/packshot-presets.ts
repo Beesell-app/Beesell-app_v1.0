@@ -4,7 +4,7 @@
 export interface PackshotPreset {
   id:            string
   label:         string
-  category:      'studio' | 'float' | 'cosmetic' | 'marketplace' | 'lifestyle' | 'premium'
+  category:      'studio' | 'float' | 'cosmetic' | 'marketplace' | 'lifestyle' | 'premium' | 'fashion'
   icon:          string
   desc:          string
   tags:          string[]
@@ -286,6 +286,112 @@ export const PACKSHOT_PRESETS: PackshotPreset[] = [
     popular: true,
   },
 
+
+  // ══ FASHION PACKSHOT ════════════════════════════════════════
+  // Catalog, PDP, dan marketplace listing untuk produk fashion.
+  // Standar internasional: consistent lighting, accurate color,
+  // clear silhouette. Variant: ghost mannequin, on-hanger,
+  // flat-lay, floating.
+
+  {
+    id: 'ghost-mannequin',
+    label: 'Ghost Mannequin',
+    category: 'fashion',
+    icon: '👗',
+    desc: 'Efek invisible mannequin — tampilkan bentuk dan struktur pakaian tanpa model. Standar fashion e-commerce internasional.',
+    tags: ['Ghost Mannequin', 'Fashion', 'Catalog', 'PDP', 'E-commerce'],
+    bestFor: ['Baju', 'Kemeja', 'Dress', 'Jaket', 'Blazer', 'Fashion catalog', 'PDP halaman produk'],
+    prompt: 'fashion product photography, ghost mannequin effect, invisible mannequin technique, clothing displayed on invisible form, clean white background, professional fashion e-commerce photography, garment shape clearly visible with 3D structure, consistent soft studio lighting, accurate fabric color reproduction, clear garment silhouette, fashion catalog standard, crisp sharp focus on fabric texture and details',
+    negativePrompt: BASE_NEGATIVE + ', visible mannequin, model, person, dark background, wrinkled fabric, bad fit',
+    bgColor: '#FFFFFF',
+    lightingStyle: 'soft-even-studio',
+    shadowStyle: 'soft',
+    outputTip: 'Standar wajib untuk PDP fashion internasional — memperlihatkan struktur dan fit pakaian secara 3D',
+    popular: true,
+  },
+
+  {
+    id: 'on-hanger',
+    label: 'On Hanger',
+    category: 'fashion',
+    icon: '🪝',
+    desc: 'Pakaian di gantungan — tampilan natural dan authentic yang populer di TikTok Shop dan Instagram.',
+    tags: ['On Hanger', 'Fashion', 'Natural', 'TikTok Shop', 'Authentic'],
+    bestFor: ['Kemeja', 'Dress', 'Outer', 'Sweater', 'TikTok Shop', 'Instagram'],
+    prompt: 'fashion product photography, clothing on hanger, garment hanging naturally on wooden or white hanger, clean white or light gray background, professional fashion photography, natural fabric drape visible, consistent soft lighting, accurate color reproduction, clear fabric texture detail, retail fashion photography style, e-commerce product listing standard',
+    negativePrompt: BASE_NEGATIVE + ', model, person, wrinkled, messy, dark background, harsh shadow',
+    bgColor: '#F9F9F9',
+    lightingStyle: 'soft-even',
+    shadowStyle: 'soft',
+    outputTip: 'Format paling natural — cocok untuk TikTok Shop dan marketplace lokal',
+  },
+
+  {
+    id: 'flat-lay-fashion',
+    label: 'Fashion Flat Lay',
+    category: 'fashion',
+    icon: '👕',
+    desc: 'Pakaian digelar rapi dari atas — layout bersih untuk foto produk utama atau konten editorial.',
+    tags: ['Flat Lay', 'Fashion', 'Editorial', 'Overhead', 'Clean'],
+    bestFor: ['Kaos', 'Kemeja', 'Celana', 'Aksesoris fashion', 'Foto editorial', 'Konten Instagram'],
+    prompt: 'fashion flat lay photography, clothing laid flat on white surface, overhead bird eye view shot, neatly arranged garment, clean white background, professional fashion editorial photography, symmetrical composition, fabric texture clearly visible, studio quality flat lay lighting, consistent even illumination, no shadows in corners, fashion catalog style, top-down product photography',
+    negativePrompt: BASE_NEGATIVE + ', wrinkled, messy, 3D, hanging, dark background, shadows, model, mannequin',
+    bgColor: '#FFFFFF',
+    lightingStyle: 'overhead-even',
+    shadowStyle: 'none',
+    outputTip: 'Ideal untuk foto carousel Instagram atau halaman utama toko — tata produk rapi sebelum upload',
+    popular: true,
+  },
+
+  {
+    id: 'floating-fashion',
+    label: 'Fashion Floating',
+    category: 'fashion',
+    icon: '✨',
+    desc: 'Pakaian melayang dramatis — efek editorial yang menarik perhatian untuk konten iklan.',
+    tags: ['Floating', 'Fashion', 'Editorial', 'Dramatic', 'Ads'],
+    bestFor: ['Dress', 'Jaket', 'Outer', 'Konten iklan', 'Sosial media'],
+    prompt: 'fashion editorial photography, floating clothing effect, garment suspended mid-air as if worn by invisible person, dynamic fabric movement, clean white or light background, high fashion editorial photography, dramatic product presentation, fabric flowing naturally, creative fashion advertising photography, levitating clothing, visible garment structure and silhouette',
+    negativePrompt: BASE_NEGATIVE + ', mannequin, model, messy, dark, collapsed fabric, no structure',
+    bgColor: '#FAFAFA',
+    lightingStyle: 'dramatic-soft',
+    shadowStyle: 'floating',
+    outputTip: 'Konten yang stop-scroll — sangat efektif untuk iklan Meta dan TikTok Ads fashion',
+  },
+
+  {
+    id: 'fashion-detail',
+    label: 'Detail Shot',
+    category: 'fashion',
+    icon: '🔍',
+    desc: 'Close-up detail kain, jahitan, dan material — membangun kepercayaan pembeli sebelum beli.',
+    tags: ['Detail', 'Close-up', 'Texture', 'Quality', 'Trust'],
+    bestFor: ['Semua produk fashion', 'Produk premium', 'Fabric quality', 'Handmade', 'Batik'],
+    prompt: 'fashion detail macro photography, extreme close-up of fabric texture and stitching detail, shallow depth of field, sharp focus on material quality, professional product detail photography, visible thread detail, fabric weave pattern, premium material photography, high-end fashion close-up, 100mm macro lens style, studio quality detail shot',
+    negativePrompt: BASE_NEGATIVE + ', full garment, wide shot, out of focus, blurry texture, dark',
+    bgColor: '#F5F5F5',
+    lightingStyle: 'macro-even',
+    shadowStyle: 'none',
+    outputTip: 'Foto detail kain terbukti meningkatkan konversi — pembeli lebih percaya kualitas produk',
+  },
+
+  {
+    id: 'fashion-white-pdp',
+    label: 'White PDP Standard',
+    category: 'fashion',
+    icon: '📄',
+    desc: 'Standar foto PDP fashion: background putih bersih, silhouette jelas, warna akurat. Wajib untuk listing internasional.',
+    tags: ['PDP', 'White Background', 'Standard', 'Catalog', 'Marketplace'],
+    bestFor: ['Semua produk fashion', 'Shopee Mall', 'Lazada', 'Tokopedia Official', 'PDP wajib'],
+    prompt: 'fashion product catalog photography, pure white seamless background, garment with clear defined silhouette, accurate true-to-life color reproduction, consistent soft box studio lighting, professional fashion e-commerce standard, crisp detail on fabric, clean catalog presentation, fashion PDP standard photography, balanced even illumination, no color cast, accurate product color',
+    negativePrompt: BASE_NEGATIVE + ', colored background, inaccurate color, washed out, overexposed, color cast, dark shadows',
+    bgColor: '#FFFFFF',
+    lightingStyle: 'balanced-studio',
+    shadowStyle: 'soft',
+    outputTip: 'Wajib sebagai foto utama PDP — memenuhi standar semua marketplace besar Indonesia dan internasional',
+    popular: true,
+  },
+
   // ══ PREMIUM SPECIAL ════════════════════════════════════════
 
   {
@@ -326,6 +432,7 @@ export const PACKSHOT_PRESETS: PackshotPreset[] = [
 export const PRESET_MAP = Object.fromEntries(PACKSHOT_PRESETS.map(p => [p.id, p]))
 
 export const CATEGORIES = {
+  fashion:    { label: 'Fashion',       icon: '👗', desc: 'Ghost mannequin, flat-lay, on-hanger' },
   studio:     { label: 'Studio',        icon: '🏢', desc: 'Foto studio profesional' },
   float:      { label: 'Floating',      icon: '🌟', desc: 'Produk melayang dramatis' },
   cosmetic:   { label: 'Kosmetik',      icon: '💄', desc: 'Beauty & cosmetic special' },

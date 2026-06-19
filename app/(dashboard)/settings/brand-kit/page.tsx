@@ -22,8 +22,8 @@ import {
 import {
   useBrandKitList, useCreateBrandKit, useUpdateBrandKit,
   useDeleteBrandKit, useSetDefaultKit,
-} from '@/lib/hooks/useBrandKit'
-import type { BrandKit } from '@/lib/hooks/useBrandKit'
+} from '@/hooks/useBrandKit'
+import type { BrandKit } from '@/hooks/useBrandKit'
 import { BrandKitPreview } from '@/components/brand-kit/BrandKitPreview'
 const AVAILABLE_FONTS = [
   'DM Sans', 'Fraunces', 'Poppins', 'Montserrat', 'Inter',

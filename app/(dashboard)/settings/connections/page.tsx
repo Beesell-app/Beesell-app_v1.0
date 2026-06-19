@@ -3,7 +3,7 @@
 // ── Platform connections settings page ────────────────────────
 import Link from 'next/link'
 import { ArrowLeft, Wifi, WifiOff, AlertTriangle, Loader2 } from 'lucide-react'
-import { usePlatformConnections, useConnectedCount, useHasExpiredConnection } from '@/lib/hooks/usePlatformConnections'
+import { usePlatformConnections, useConnectedCount, useHasExpiredConnection } from '@/hooks/usePlatformConnections'
 import { PlatformCard }   from '@/components/platform/PlatformCard'
 import { PLATFORM_LIST }  from '@/lib/platform/platform-config'
 import type { SupportedPlatform } from '@/lib/platform/platform-config'

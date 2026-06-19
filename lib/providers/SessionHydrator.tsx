@@ -1,7 +1,7 @@
 'use client'
 // apps/web-app/lib/providers/SessionHydrator.tsx
 import { usePathname }    from 'next/navigation'
-import { useSession }     from '@/lib/hooks/useSession'
+import { useSession }     from '@/hooks/useSession'
 import { useSessionStore } from '@/store/sessionStore'
 
 // Halaman yang tidak perlu hydrate session

@@ -1,5 +1,5 @@
 'use client'
-import { JobType } from '@/lib/hooks/useJobStatus'
+import { JobType } from '@/hooks/useJobStatus'
 // apps/web-app/components/jobs/ProgressBar.tsx
 // Animated progress bar dengan smooth interpolation
 // - Glow effect saat lagi processing

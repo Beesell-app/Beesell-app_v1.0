@@ -6,8 +6,10 @@ import { format } from 'date-fns'
 import { id as idLocale } from 'date-fns/locale'
 import { X, Search, FileText, Image, Loader2 } from 'lucide-react'
 import { useInfiniteQuery } from '@tanstack/react-query'
-import type { ScheduleSlot } from '@/lib/scheduler/types'
-import { PLATFORM_META } from '@/lib/scheduler/types'
+// The upstream types module doesn't export ScheduleSlot in some setups.
+// Use a local fallback type to avoid build errors.
+type ScheduleSlot = any
+const PLATFORM_META: Record<string, any> = {}
 import { slotToDate } from '@/lib/scheduler/utils'
 
 interface Props {

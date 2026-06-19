@@ -1,7 +1,7 @@
 'use client'
 // app/page.tsx — BeeSell AI Landing Page v4
 // Light theme · #F59E0B Bee Amber · Full responsive · Hero video+dashboard · Results gallery · FAQ
-
+import { usePricing } from '@/hooks/use-pricing'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import {
@@ -17,6 +17,8 @@ import {
   CircleX
 } from 'lucide-react'
 import Image from 'next/image'
+import { startPayment } from '@/lib/payment-client'
+
 // ── Design Tokens ─────────────────────────────────────────────
 const C = {
   amber: '#F59E0B', amberDk: '#D97706', amberLt: '#FEF3C7', amberXlt: '#FFFBEB',
@@ -56,7 +58,7 @@ const TOOLS = [
 
 
 const AI_IMAGES = [
-  { icon: '🌟', label: 'AI Photoshoot',    desc: 'Foto produk → lifestyle premium. 10 preset: Luxury, Korean, Cinematic.', badge: 'Terpopuler', color: C.amber,   href: '/studio/image/photoshoot' },
+  
   { icon: '📦', label: 'AI Packshot',      desc: 'Studio ecommerce otomatis. 17 preset: White Studio, Floating Product.', badge: null,         color: '#7C3AED', href: '/studio/image/packshot' },
   { icon: '🧑‍🦰', label: 'Product to Model', desc: 'Produk → foto model. 16 model lokal Indonesia: hijab, anak, global.',   badge: 'New',         color: '#DB2777', href: '/studio/image/product-to-model' },
   { icon: '👗', label: 'AI Try-On',        desc: 'Upload pakaian + model → AI fitting otomatis. Pose & identitas terjaga.', badge: null,         color: '#7C3AED', href: '/studio/image/tryon' },
@@ -66,7 +68,7 @@ const AI_IMAGES = [
 ]
 
 const VIDEO_ENGINE = [
-  { icon:'🎬', label:'Product Video AI',    desc:'Video produk sinematik otomatis dari foto. Tanpa kamera, tanpa editing.' },
+  { icon:'🎬', label:'Image to Video',    desc:'Buat klip video pendek bergerak dari gambar produk.' },
   { icon:'📱', label:'UGC Video Generator', desc:'Unboxing, review, daily use — gaya UGC authentic yang convert.' },
   { icon:'🎵', label:'TikTok Reels AI',     desc:'Script + visual TikTok/Reels siap posting. Foto jadi video viral.' },
 ]
@@ -98,7 +100,7 @@ const PRICING = [
       { ok: true,  t: 'Resize 3 preset' },
       { ok: true,  t: 'Upscale 2× only' },
       { ok: true,  t: 'Watermark wajib' },
-      { ok: false, t: 'AI Photoshoot & Packshot' },
+      
       { ok: false, t: 'Product to Model & Try-On' },
       { ok: false, t: 'Marketing Tools' },
     ],
@@ -109,7 +111,7 @@ const PRICING = [
     features: [
       { ok: true,  t: '200 generate/bulan' },
       { ok: true,  t: 'Semua 5 Quick Tools' },
-      { ok: true,  t: 'AI Photoshoot (10 preset)' },
+      
       { ok: true,  t: 'AI Packshot (17 preset)' },
       { ok: true,  t: 'Caption + Hook + CTA + Hashtag' },
       { ok: true,  t: 'Tanpa watermark' },
@@ -462,7 +464,7 @@ function Hero() {
 }, [isMobile])
   
   const resultCards = [
-    { before: '📦', after: '🌟', label: 'AI Photoshoot', sub: 'Luxury Studio', color: C.amber },
+   
     { before: '📸', after: '🧑‍🦰', label: 'Product to Model', sub: 'Wanita Asia Muda', color: '#DB2777' },
     { before: '👗', after: '👗', label: 'AI Try-On', sub: 'Fitting otomatis', color: C.purple },
     { before: '🖼️', after: '✨', label: 'AI Enhancer', sub: 'TikTok Viral', color: '#059669' },
@@ -548,7 +550,7 @@ function Hero() {
                   <div style={{ fontSize: '14px', fontWeight: 800, color: C.ink, marginBottom: '4px' }}>Demo Video BeeSell AI</div>
                   <div style={{ fontSize: '11px', color: C.inkMuted }}>Taruh <code style={{ background: C.bgAlt, padding: '1px 5px', borderRadius: '4px', fontSize: '10px' }}>demo-video.mp4</code> di /public/</div>
                 </div>
-                {[{ icon: '🌟', l: 'AI Photoshoot', s: 'Luxury Studio' }, { icon: '🧑‍🦰', l: 'Product to Model', s: '16 model' }, { icon: '👗', l: 'AI Try-On', s: 'Auto fitting' }].map((item, i) => (
+                {[{ icon: '🧑‍🦰', l: 'Product to Model', s: '16 model' }, { icon: '👗', l: 'AI Try-On', s: 'Auto fitting' }].map((item, i) => (
                   <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'center', padding: '8px 10px', borderRadius: '10px', background: 'rgba(255,255,255,.8)', border: `1px solid ${C.border}`, width: '100%', maxWidth: '220px' }}>
                     <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: C.amberLt, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', flexShrink: 0 }}>{item.icon}</div>
                     <div>
@@ -699,7 +701,7 @@ function ResultsGallery() {
   ]
   const photos = [
     { src:'/results/photo-luxury.jpg', fb:'🌟', label:'Luxury Studio', tag:'AI Packshot' },
-    { src:'/results/photo-korean.jpg', fb:'🌸', label:'Korean Aesthetic', tag:'AI Photoshoot' },
+    
     { src:'/results/photo-tryon.jpg',  fb:'👗', label:'Fashion Try-On',  tag:'AI Try-On' },
     { src:'/results/photo-model.jpg',  fb:'🧑‍🦰', label:'To Model AI',  tag:'Product to Model' },
     { src:'/results/photo-enhancer.jpg',fb:'✨', label:'Product Enhancer',tag:'AI Enhancer' },
@@ -1168,6 +1170,22 @@ function Testimonials() {
 // PRICING — Mobile: swipe carousel with peek next card
 // ════════════════════════════════════════════════════════════
 function Pricing() {
+  const { getPrice, getQuotaNote, getQuota, getAddons } = usePricing()
+  const addonsLive = getAddons('active')
+  const ADDONS_DB = addonsLive.length
+  ? addonsLive.map(a => ({ addon_id: a.addon_id, icon: a.icon, label: a.label, qty: a.qty, price: a.price, color: a.color, badge: a.badge }))
+  : ADDONS
+  const plans = PRICING.map(p => {
+    const credits = getQuota(p.id).credits
+    return {
+      ...p,
+      price: getPrice(p.id) || p.price,
+      note:  getQuotaNote(p.id) || p.note,
+      features: credits > 0
+        ? [{ ok: true, t: `${credits.toLocaleString('id-ID')} kredit/bulan` }, ...p.features]
+        : p.features,
+    }
+  })
   const PCard = ({ p }: { p: typeof PRICING[0] }) => (
     <div style={{ borderRadius: '20px', overflow: 'hidden', background: p.highlight ? `linear-gradient(170deg,${C.amber},${C.amberDk})` : C.white, border: `2px solid ${p.highlight ? C.amber : C.border}`, boxShadow: p.highlight ? `0 20px 48px ${C.amberGlow}` : C.sm, height: '100%' }}>
       {p.badge && <div style={{ background: 'rgba(0,0,0,.15)', padding: '5px', textAlign: 'center', fontSize: '11px', fontWeight: 800, color: '#fff' }}>{p.badge}</div>}
@@ -1188,13 +1206,26 @@ function Pricing() {
             </div>
           ))}
         </div>
-        <Link href={p.href} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px', padding: '11px', borderRadius: '11px', background: p.highlight ? '#fff' : `linear-gradient(135deg,${C.amber},${C.amberDk})`, color: p.highlight ? C.amberDk : '#fff', fontSize: '12px', fontWeight: 700, textDecoration: 'none', boxShadow: p.highlight ? 'none' : C.sa }}>
+        <button type="button" onClick={() => startPayment({ type:'plan', id:p.id, billing:'monthly' })} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px', padding: '11px', borderRadius: '11px', width:'100%', border:'none', cursor:'pointer', background: p.highlight ? '#fff' : `linear-gradient(135deg,${C.amber},${C.amberDk})`, color: p.highlight ? C.amberDk : '#fff', fontSize: '12px', fontWeight: 700, fontFamily:'inherit', boxShadow: p.highlight ? 'none' : C.sa }}>
           {p.cta} <ArrowRight size={11} />
-        </Link>
+        </button>
       </div>
     </div>
   )
  
+  function startPayment({ type, id, billing }: { type: string; id: string | number; billing?: string }): void {
+    if (typeof window === 'undefined') return
+
+    const params = new URLSearchParams({
+      type,
+      id: String(id),
+    })
+
+    if (billing) params.append('billing', billing)
+
+    window.location.href = `/register?${params.toString()}`
+  }
+
   return (
     <Sec id="harga" bg={C.bgAlt}>
       <div style={W}>
@@ -1206,19 +1237,19 @@ function Pricing() {
  
         {/* Mobile: swipe carousel */}
         <div className="m-show">
-          <Carousel items={PRICING} peek={32} renderItem={(p) => <PCard p={p} />} />
+          <Carousel items={plans} peek={32} renderItem={(p) => <PCard p={p} />} />
         </div>
  
         {/* Desktop: 4-col */}
         <div className="d-show" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '10px', alignItems: 'flex-start', marginBottom: '20px' }}>
-          {PRICING.map((p, i) => <PCard key={i} p={p} />)}
+          {plans.map((p, i) => <PCard key={i} p={p} />)}
         </div>
  
         {/* Add-ons: horizontal scroll always */}
         <div style={{ marginTop: '24px' }}>
           <div style={{ fontSize: '11px', fontWeight: 700, color: C.inkMuted, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '12px', textAlign: 'center' }}>🐝 Add-On — Beli Terpisah</div>
           <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px', scrollbarWidth: 'none' } as React.CSSProperties}>
-            {ADDONS.map((a, i) => (
+            {ADDONS_DB.map((a, i) => (
               <div key={i} style={{ flexShrink: 0, padding: '12px 13px', borderRadius: '13px', background: C.white, border: `1.5px solid ${C.border}`, boxShadow: C.sh, width: 'clamp(145px,42vw,190px)', position: 'relative', transition: 'all .15s' }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = C.amber; (e.currentTarget as HTMLElement).style.boxShadow = `0 4px 14px ${C.amberGlow}` }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = C.border; (e.currentTarget as HTMLElement).style.boxShadow = C.sh }}>
@@ -1228,7 +1259,7 @@ function Pricing() {
                 <div style={{ fontSize: '10px', color: C.amber, fontWeight: 600, marginBottom: '8px' }}>{a.qty}</div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span style={{ fontSize: '13px', fontWeight: 900, color: C.ink }}>Rp{(a.price / 1000).toFixed(0)}K</span>
-                  <button type="button" style={{ padding: '4px 9px', borderRadius: '6px', border: 'none', background: `linear-gradient(135deg,${C.amber},${C.amberDk})`, color: '#fff', fontSize: '10px', fontWeight: 700, cursor: 'pointer', boxShadow: C.sa, fontFamily: 'inherit' }}>Beli</button>
+                  <button type="button" onClick={() => startPayment({ type:'addon', id: (a as any).addon_id })} style={{ padding: '4px 9px', borderRadius: '6px', border: 'none', background: `linear-gradient(135deg,${C.amber},${C.amberDk})`, color: '#fff', fontSize: '10px', fontWeight: 700, cursor: 'pointer', boxShadow: C.sa, fontFamily: 'inherit' }}>Beli</button>
                 </div>
               </div>
             ))}
@@ -1269,7 +1300,7 @@ function FeatureComparisonTable() {
     { cat:'AI Image',    feature:'AI Try-On Fashion',    s:false,     b:false, p:true,  biz:true  },
     { cat:'AI Image',    feature:'Model Swap AI',        s:false,     b:false, p:true,  biz:true  },
     { cat:'AI Image',    feature:'Face Swap AI',         s:false,     b:false, p:true,  biz:true  },
-    { cat:'Video AI',    feature:'Product Video AI',     s:false,     b:false, p:'5/bln',biz:'20/bln'},
+    { cat:'Video AI',    feature:'image to Video',     s:false,     b:false, p:'5/bln',biz:'20/bln'},
     { cat:'Video AI',    feature:'UGC Video Generator',  s:false,     b:false, p:'5/bln',biz:'20/bln'},
     { cat:'Video AI',    feature:'TikTok Reels AI',      s:false,     b:false, p:'5/bln',biz:'20/bln'},
     { cat:'Marketing',   feature:'Caption + Hook + CTA', s:false,     b:true,  p:true,  biz:true  },

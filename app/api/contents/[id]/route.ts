@@ -29,20 +29,21 @@ async function authenticate() {
   if (error || !user) return null
 
   const dbUser = await db.user.findUnique({
-    where: { id: user.id },
+  where: { id: user.id },
 
-    select: {
-      tenant_id: true,
-      name: true,
+  select: {
+    tenant_id: true,
+    name: true,
+    role: true,
 
-      tenants: {
-        select: {
-          plan: true,
-          name: true,
-        },
+    tenants: {
+      select: {
+        plan: true,
+        name: true,
       },
     },
-  })
+  },
+})
 
   if (!dbUser) return null
 

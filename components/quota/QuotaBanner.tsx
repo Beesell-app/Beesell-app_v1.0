@@ -4,7 +4,7 @@
 import Link from 'next/link'
 import { AlertTriangle, Zap, X, Clock } from 'lucide-react'
 import { useState }       from 'react'
-import { useQuotaStatus } from '@/lib/hooks/useQuotaStatus'
+import { useQuotaStatus } from '@/hooks/useQuotaStatus'
 
 export function QuotaBanner() {
   const [dismissed, setDismissed] = useState(false)

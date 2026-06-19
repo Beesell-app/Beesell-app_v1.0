@@ -4,7 +4,7 @@
 // Includes color picker (8 preset colors)
 import { useState, useEffect, useRef } from 'react'
 import { X, Folder as FolderIcon, Check, Loader2, AlertCircle } from 'lucide-react'
-import { useCreateFolder, useUpdateFolder } from '@/lib/hooks/useFolders'
+import { useCreateFolder, useUpdateFolder } from '@/hooks/useFolders'
 import type { Folder } from '@/lib/folder-types'
 import { FOLDER_COLORS, DEFAULT_COLOR } from '@/lib/folder-types'
 

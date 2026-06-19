@@ -18,7 +18,7 @@ const sentryOptions = {
 
   widenClientFileUpload: true,
 
-  tunnelRoute: '/monitoring',
+  // unnelRoute: '/monitoring',
 
   automaticVercelMonitors: true,
 

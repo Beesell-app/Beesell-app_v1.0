@@ -1,759 +1,581 @@
 'use client'
-// app/(dashboard)/dashboard/page.tsx — v3
-// AI Image Generator section dengan tooltip popup per fitur
+// app/(dashboard)/dashboard/page.tsx
+// ══════════════════════════════════════════════════════════════
+// BeeSell AI — Dashboard Home (NO DUMMY DATA)
+//
+// Semua angka & list dari DB:
+//   • Tier         → useDailyUsage().tier  (user_credits.plan_tier)
+//   • Superuser    → useUserRole().isSuperuser (besties.aegle@gmail.com)
+//   • KPI counts   → /api/dashboard/summary (ai_assets per type, 30 hari)
+//   • Quota        → /api/dashboard/summary (user_credits balance/quota)
+//   • Chart 7 hari → ai_assets group by day
+//   • Recent      → ai_assets order created_at desc limit 6
+//   • Upcoming     → scheduled_posts besok (defensif)
+//
+// User baru tanpa data → semua nol/empty state (BUKAN angka palsu).
+// Superuser tanpa data → tetap empty state, tapi quota strip "∞".
+// ══════════════════════════════════════════════════════════════
 
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { useState, useCallback, useRef, useEffect } from 'react'
 import {
-  Copy, RefreshCw, ChevronRight, FileText, Check,
-  ArrowRight, Zap, Palette, CreditCard, Settings,
-  Archive, ImageIcon, X, Clock, Sparkles, Play,
+  ArrowRight, RefreshCw, Sparkles, Crown, CreditCard, AlertTriangle,
+  Download, Plus, ChevronRight, Infinity as InfinityIcon,
 } from 'lucide-react'
-import { useDashboard } from '@/lib/hooks/useDashboard'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import {
-  PACKSHOT_PRESETS,
-  type PackshotPreset
-} from '@/lib/studio/packshot-presets'
+  AreaChart, Area, BarChart, Bar,
+  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
+} from 'recharts'
+import { useUserRole }   from '@/hooks/use-user-role'
+import { useDailyUsage } from '@/hooks/use-daily-usage'
 
-type ImageTool = {
-  href: string
-  icon: string
-  label: string
-  badge: string | null
-  badgeBg: string | null
-  color: string
-  bg: string
-  title: string
-  tagline: string
-  desc: string
-  useCase: string
-  presets: string[]
-  time: string
-  credit: string
-  bestFor: string[]
-}
+// ── Tokens (amber lebah) ──────────────────────────────────────
 const C = {
-  brand:'#2563EB', brand50:'#EFF6FF', brand100:'#DBEAFE', brand700:'#1D4ED8',
-  purple:'#7C3AED', pur50:'#F5F3FF',
-  green:'#059669', grn50:'#ECFDF5',
-  amber:'#D97706', amb50:'#FFFBEB',
-  red:'#DC2626', red50:'#FEF2F2',
-  orange:'#EA580C', o50:'#FFF7ED',
-  cyan:'#0891B2', c50:'#ECFEFF',
-  pink:'#DB2777', pk50:'#FDF2F8',
-  slate900:'#0F172A', slate800:'#1E293B', slate700:'#334155', slate600:'#475569',
-  slate500:'#64748B', slate400:'#94A3B8', slate300:'#CBD5E1',
-  slate200:'#E2E8F0', slate100:'#F1F5F9', slate50:'#F8FAFC', white:'#ffffff',
+  amber:'#F59E0B', amberDk:'#D97706', amberLt:'#FEF3C7', amberXlt:'#FFFBEB',
+  white:'#FFFFFF', bg:'#F9FAFB', surface:'#FFFFFF',
+  border:'#E5E7EB',
+  ink:'#111827', inkSub:'#374151', inkMuted:'#6B7280', inkDim:'#9CA3AF',
+  green:'#059669', greenLt:'#ECFDF5',
+  blue:'#3B82F6',  blueLt:'#EFF6FF',
+  purple:'#7C3AED', purpleLt:'#F5F3FF',
+  red:'#EF4444',   redLt:'#FEF2F2',
+  orange:'#F97316', orangeLt:'#FFF7ED',
+  sky:'#0284C7',   skyLt:'#E0F2FE',
+  sh:'0 1px 3px rgba(0,0,0,.06)',
+  sm:'0 4px 16px rgba(0,0,0,.07)',
+  sa:'0 6px 20px rgba(245,158,11,.22)',
 }
 
-function Shimmer({ w='100%', h='14px', r='6px' }: { w?:string; h?:string; r?:string }) {
-  return <div style={{ width:w, height:h, borderRadius:r, background:'linear-gradient(90deg,#F1F5F9 25%,#E2E8F0 50%,#F1F5F9 75%)', backgroundSize:'200% 100%', animation:'shimmer 1.4s ease-in-out infinite' }}/>
+const BUCKET_META: Record<string, { icon:string; color:string; bg:string; label:string }> = {
+  image: { icon:'🖼️', color:C.amber,  bg:C.amberXlt, label:'Gambar' },
+  video: { icon:'🎬', color:C.purple, bg:C.purpleLt, label:'Video' },
+  text:  { icon:'✍️', color:C.blue,   bg:C.blueLt,   label:'Teks' },
+  other: { icon:'📄', color:C.inkMuted,bg:C.bg,      label:'Lainnya' },
 }
 
-const PLATFORM_EMOJI: Record<string,string> = {
-  instagram:'📸','tiktok-shop':'🎵',tiktok:'🎵',shopee:'🛍️',tokopedia:'🛒',
-  whatsapp:'💬',facebook:'👥',lazada:'📦',twitter:'𝕏',threads:'🧵',
-}
-const NICHE_EMOJI: Record<string,string> = {
-  fashion:'👗',skincare:'✨',food:'🍜',electronics:'📱',home:'🏠',health:'💊',digital:'💻',other:'📦',
-}
-const SELLER_LABEL: Record<string,string> = {
-  seller:'Marketplace Seller',affiliator:'Affiliator',dropshipper:'Dropshipper',
-  brand:'Brand Owner',agency:'Agency',reseller:'Reseller',
-}
-const PLAN_COLOR: Record<string,string> = {
-  free:C.slate500,starter:C.slate500,basic:C.green,pro:C.purple,business:C.amber,
-}
-
-// ── Quick Tools ───────────────────────────────────────────────
-const QUICK_TOOLS = [
-  { href:'/quick-tools?tool=remove-bg',     icon:'🪄', label:'Remove BG',    desc:'Hapus background otomatis', color:C.brand,  bg:C.brand50,  badge:'Populer' },
-  { href:'/quick-tools?tool=upscale',       icon:'🔍', label:'AI Upscale',   desc:'Tingkatkan resolusi ke HD', color:C.purple, bg:C.pur50,    badge:null },
-  { href:'/quick-tools/resize',             icon:'📐', label:'Resize Smart', desc:'1 foto → semua platform',   color:C.green,  bg:C.grn50,    badge:'Smart' },
-  { href:'/quick-tools?tool=relight',       icon:'💡', label:'AI Relight',   desc:'Perbaiki pencahayaan foto', color:C.amber,  bg:C.amb50,    badge:'Beta' },
-  { href:'/quick-tools?tool=remove-object', icon:'✏️', label:'Remove Object',desc:'Hapus objek mengganggu',   color:C.pink,   bg:C.pk50,     badge:null },
-]
-
-// ── AI Image Generator — 7 sub fitur dengan popup detail ──────
-const IMAGE_TOOLS: ImageTool[] = [
-  {
-    href: '/studio/image/photoshoot',
-    icon: '🌟', label: 'Product Photoshoot', badge: '⭐ Terpopuler', badgeBg: C.brand,
-    color: C.brand, bg: C.brand50,
-    title: 'AI Product Photoshoot',
-    tagline: 'Foto biasa → lifestyle photography premium',
-    desc: 'AI mengubah foto produk dari HP menjadi visual lifestyle photography berkualitas studio. Latar, pencahayaan, dan suasana berubah sesuai style yang kamu pilih.',
-    useCase: 'Foto skincare di meja → jadi foto luxury marble studio. Foto kopi → cinematic cafe aesthetic.',
-    presets: ['Luxury','Korean Aesthetic','Minimal Clean','Dark Moody','Warm Lifestyle','Fashion Editorial','Natural Light','Marble Studio','Soft Morning'],
-    time: '~15 detik',
-    credit: '2 kredit/generate',
-    bestFor: ['Seller skincare','Brand fashion','FMCG & food','Affiliator lifestyle'],
-  },
-  {
-  href: '/studio/image/packshot',
-  icon: '📦',
-  label: 'Packshot Generator',
-
-  badge: null,
-  badgeBg: null,
-
-  color: C.purple,
-  bg: C.pur50,
-
-  title: 'AI Packshot Generator',
-
-  tagline: 'Foto ecommerce studio otomatis',
-
-  desc: 'Generate foto studio ecommerce siap marketplace secara otomatis. Bayangan sempurna, latar bersih, dan tampilan profesional tanpa perlu fotografer atau studio fisik.',
-
-  useCase: 'Upload foto produk → langsung jadi foto toko bersih seperti brand premium.',
-
-  presets: PACKSHOT_PRESETS
-    .filter((p: PackshotPreset) => p.popular)
-    .map((p: PackshotPreset) => p.label),
-
-  time: '~12 detik',
-
-  credit: '1 kredit/generate',
-
-  bestFor: [
-    'Semua seller marketplace',
-    'Tokopedia & Shopee',
-    'Brand owner',
-    'Dropshipper',
-  ],
-},
-  {
-    href: '/studio/image/product-to-model',
-    icon: '🧑‍🦰', label: 'Product to Model', badge: '✨ New', badgeBg: C.pink,
-    color: C.pink, bg: C.pk50,
-    title: 'Product to Model AI',
-    tagline: 'Foto produk → foto model memakai produk',
-    desc: 'Upload foto baju atau aksesoris — AI otomatis menempatkan produk ke model AI realistis pilihanmu. Pilih tipe model, pose, ekspresi, dan background.',
-    useCase: 'Upload foto kaos polos → model Asia perempuan memakai kaos tersebut, difoto studio.',
-    presets: ['Female Asian','Hijab Woman','Korean Female','Male Asian','Western Female','Streetwear Male'],
-    time: '~20 detik',
-    credit: '3 kredit/generate',
-    bestFor: ['Seller fashion','Seller hijab','Brand pakaian','Affiliator fashion'],
-  },
-  {
-    href: '/studio/image/tryon',
-    icon: '👗', label: 'AI Try-On Fashion', badge: null, badgeBg: null,
-    color: C.amber, bg: C.amb50,
-    title: 'AI Try-On Fashion',
-    tagline: 'Virtual fitting pakaian ke model',
-    desc: 'Upload foto pakaian + foto model pilihanmu. AI secara otomatis mem-fitting pakaian ke model secara realistis — hasilnya seperti foto profesional.',
-    useCase: 'Punya foto baju dan foto model — AI gabungkan jadi foto fashion yang menjual.',
-    presets: ['Studio Fashion','Korean Fashion','Outdoor Streetwear','Luxury Fashion','Casual Daily'],
-    time: '~25 detik',
-    credit: '3 kredit/generate',
-    bestFor: ['Brand fashion','Seller pakaian','Online boutique','Affiliator fashion'],
-  },
-  {
-    href: '/studio/image/model-swap',
-    icon: '🔄', label: 'Model Swap AI', badge: null, badgeBg: null,
-    color: C.orange, bg: C.o50,
-    title: 'Model Swap AI',
-    tagline: 'Ganti model di foto fashion yang sudah ada',
-    desc: 'Punya foto produk fashion tapi model-nya kurang cocok? AI ganti model di foto tersebut sesuai pilihan — tanpa perlu foto ulang.',
-    useCase: 'Foto fashion dengan model barat → ganti ke model Indonesia/Hijab yang lebih relevan.',
-    presets: ['Model Lokal','Hijab Model','Korean Female','Western Model','Gender Swap'],
-    time: '~18 detik',
-    credit: '2 kredit/generate',
-    bestFor: ['Reseller fashion','Dropshipper','Affiliator','Brand yang rebranding'],
-  },
-  {
-    href: '/studio/image/face-swap',
-    icon: '😊', label: 'Face Swap AI', badge: null, badgeBg: null,
-    color: C.cyan, bg: C.c50,
-    title: 'Face Swap AI',
-    tagline: 'Ganti wajah model dengan wajah sendiri',
-    desc: 'Upload foto wajahmu — AI ganti wajah model di foto iklan dengan wajahmu secara natural. Cocok untuk personal branding dan creator ads.',
-    useCase: 'Foto iklan dengan model → wajah diganti wajah owner untuk branding lebih personal dan dipercaya.',
-    presets: ['Personal Branding','Creator Ads','Owner Face Branding'],
-    time: '~10 detik',
-    credit: '2 kredit/generate',
-    bestFor: ['Affiliator personal branding','Owner usaha','Content creator','Seller dengan fanbase'],
-  },
-  {
-    href: '/studio/image/enhancer',
-    icon: '✨', label: 'Product Enhancer', badge: null, badgeBg: null,
-    color: C.green, bg: C.grn50,
-    title: 'Product Enhancer AI',
-    tagline: 'Foto biasa → aesthetic premium siap jual',
-    desc: 'Foto produk asal dari HP yang terlihat biasa? AI perbaiki pencahayaan, detail, estetika, dan tampilan keseluruhan menjadi visual premium.',
-    useCase: 'Foto produk di lantai dengan cahaya jelek → clean ecommerce aesthetic siap upload Shopee.',
-    presets: ['Shopee Clean','TikTok Viral','Luxury Ads','Korean Minimal','Bright Catalog','Dark Premium'],
-    time: '~10 detik',
-    credit: '1 kredit/generate',
-    bestFor: ['Semua seller','UMKM','Dropshipper','Reseller dengan foto seadanya'],
-  },
-]
-
-// ── Tooltip Popup Component ────────────────────────────────────
-function ToolPopup({ tool, onClose, anchorRef }: {
-  tool: typeof IMAGE_TOOLS[0]
-  onClose: () => void
-  anchorRef: React.RefObject<HTMLDivElement>
-}) {
-  const popupRef = useRef<HTMLDivElement>(null)
-
-  // Close on outside click
-  useEffect(() => {
-    function handle(e: MouseEvent) {
-      if (
-        popupRef.current && !popupRef.current.contains(e.target as Node) &&
-        anchorRef.current && !anchorRef.current.contains(e.target as Node)
-      ) {
-        onClose()
-      }
-    }
-    document.addEventListener('mousedown', handle)
-    return () => document.removeEventListener('mousedown', handle)
-  }, [onClose, anchorRef])
-
-  // Close on Escape
-  useEffect(() => {
-    function handle(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
-    document.addEventListener('keydown', handle)
-    return () => document.removeEventListener('keydown', handle)
-  }, [onClose])
-
+// ── Skeleton ──────────────────────────────────────────────────
+function Sk({ w='100%', h='14px', r='6px' }: { w?:string; h?:string; r?:string }) {
   return (
-    <>
-      {/* Backdrop */}
-      <div style={{ position:'fixed', inset:0, zIndex:1000, background:'rgba(15,23,42,.35)', backdropFilter:'blur(2px)' }} onClick={onClose}/>
-
-      {/* Popup panel */}
-      <div ref={popupRef} style={{
-        position:'fixed', top:'50%', left:'50%', transform:'translate(-50%,-50%)',
-        zIndex:1001, width:'min(520px, 92vw)',
-        background:C.white, borderRadius:'20px', overflow:'hidden',
-        boxShadow:'0 20px 60px rgba(15,23,42,.2), 0 4px 16px rgba(15,23,42,.1)',
-        animation:'popupIn .18s ease-out',
-      }}>
-        {/* Header */}
-        <div style={{ padding:'20px 22px 16px', background:`linear-gradient(135deg, ${tool.color}12, ${tool.color}06)`, borderBottom:`1px solid ${tool.color}20`, position:'relative' }}>
-          <button onClick={onClose} style={{ position:'absolute', top:'14px', right:'14px', width:'28px', height:'28px', borderRadius:'50%', border:'none', background:`${tool.color}15`, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:tool.color }}>
-            <X size={13}/>
-          </button>
-          <div style={{ display:'flex', alignItems:'flex-start', gap:'13px' }}>
-            <div style={{ width:'52px', height:'52px', borderRadius:'14px', background:`linear-gradient(135deg, ${tool.color}, ${tool.color}cc)`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'26px', flexShrink:0 }}>
-              {tool.icon}
-            </div>
-            <div>
-              {tool.badge && (
-                <div style={{ display:'inline-flex', alignItems:'center', gap:'4px', fontSize:'9px', fontWeight:700, padding:'2px 8px', borderRadius:'20px', background:tool.badgeBg??tool.color, color:'#fff', marginBottom:'4px' }}>
-                  {tool.badge}
-                </div>
-              )}
-              <div style={{ fontSize:'17px', fontWeight:700, color:C.slate900, marginBottom:'2px' }}>{tool.title}</div>
-              <div style={{ fontSize:'12px', color:tool.color, fontWeight:600 }}>{tool.tagline}</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Body */}
-        <div style={{ padding:'16px 22px', maxHeight:'60vh', overflowY:'auto' }}>
-          {/* Description */}
-          <p style={{ fontSize:'13px', color:C.slate700, lineHeight:1.7, marginBottom:'14px' }}>{tool.desc}</p>
-
-          {/* Use Case */}
-          <div style={{ padding:'10px 13px', background:`${tool.color}0a`, border:`1px solid ${tool.color}20`, borderRadius:'10px', marginBottom:'14px' }}>
-            <div style={{ fontSize:'10px', fontWeight:700, color:tool.color, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'5px', display:'flex', alignItems:'center', gap:'4px' }}>
-              <Sparkles size={10}/> Contoh Use Case
-            </div>
-            <p style={{ fontSize:'12px', color:C.slate700, lineHeight:1.6, margin:0 }}>{tool.useCase}</p>
-          </div>
-
-          {/* Presets */}
-          <div style={{ marginBottom:'14px' }}>
-            <div style={{ fontSize:'10px', fontWeight:700, color:C.slate500, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'7px' }}>Style Presets Tersedia</div>
-            <div style={{ display:'flex', flexWrap:'wrap', gap:'5px' }}>
-              {tool.presets.map(p => (
-                <span key={p} style={{ fontSize:'11px', padding:'3px 9px', borderRadius:'20px', background:tool.bg, color:tool.color, fontWeight:600, border:`1px solid ${tool.color}20` }}>{p}</span>
-              ))}
-            </div>
-          </div>
-
-          {/* Best for */}
-          <div style={{ marginBottom:'16px' }}>
-            <div style={{ fontSize:'10px', fontWeight:700, color:C.slate500, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'7px' }}>Cocok Untuk</div>
-            <div style={{ display:'flex', flexWrap:'wrap', gap:'5px' }}>
-              {tool.bestFor.map(b => (
-                <span key={b} style={{ fontSize:'11px', padding:'3px 9px', borderRadius:'20px', background:C.slate100, color:C.slate600, fontWeight:500 }}>✓ {b}</span>
-              ))}
-            </div>
-          </div>
-
-          {/* Meta info */}
-          <div style={{ display:'flex', gap:'10px', padding:'10px 0', borderTop:`1px solid ${C.slate100}` }}>
-            <div style={{ display:'flex', alignItems:'center', gap:'5px', fontSize:'11px', color:C.slate500 }}>
-              <Clock size={11} color={C.slate400}/>{tool.time}
-            </div>
-            <div style={{ width:'1px', background:C.slate200 }}/>
-            <div style={{ display:'flex', alignItems:'center', gap:'5px', fontSize:'11px', color:C.slate500 }}>
-              <Sparkles size={11} color={C.slate400}/>{tool.credit}
-            </div>
-          </div>
-        </div>
-
-        {/* Footer CTA */}
-        <div style={{ padding:'14px 22px', borderTop:`1px solid ${C.slate100}`, display:'flex', gap:'8px' }}>
-          <button onClick={onClose} style={{ padding:'10px 16px', borderRadius:'10px', border:`1.5px solid ${C.slate200}`, background:C.white, color:C.slate600, fontSize:'13px', fontWeight:600, cursor:'pointer', fontFamily:"'DM Sans',sans-serif" }}>
-            Tutup
-          </button>
-          <Link href={tool.href} style={{ flex:1, textDecoration:'none' }}>
-            <button style={{ width:'100%', padding:'10px 16px', borderRadius:'10px', border:'none', background:`linear-gradient(135deg, ${tool.color}, ${tool.color}cc)`, color:'#fff', fontSize:'13px', fontWeight:700, cursor:'pointer', fontFamily:"'DM Sans',sans-serif", display:'flex', alignItems:'center', justifyContent:'center', gap:'6px', boxShadow:`0 4px 12px ${tool.color}35` }}>
-              <Play size={13}/> Buka {tool.title}
-            </button>
-          </Link>
-        </div>
-      </div>
-    </>
+    <div style={{ width:w, height:h, borderRadius:r, background:'linear-gradient(90deg,#F3F4F6 25%,#E5E7EB 50%,#F3F4F6 75%)', backgroundSize:'200% 100%', animation:'shimmer 1.4s ease-in-out infinite' }}/>
   )
 }
 
-// ── Image Tool Card ───────────────────────────────────────────
-function ImageToolCard({ tool, onInfoClick }: {
-  tool: typeof IMAGE_TOOLS[0]
-  onInfoClick: (tool: typeof IMAGE_TOOLS[0], ref: React.RefObject<HTMLDivElement>) => void
-}) {
-  const ref = useRef<HTMLDivElement>(null)
-  const [hovered, setHovered] = useState(false)
-
+function Card({ children, style }: { children:React.ReactNode; style?:React.CSSProperties }) {
   return (
-    <div ref={ref} style={{ position:'relative' }}>
-      <div
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        style={{ borderRadius:'13px', background:C.white, border:`1.5px solid ${hovered ? tool.color : C.slate200}`, overflow:'hidden', transition:'all .15s', transform:hovered?'translateY(-2px)':'translateY(0)', boxShadow:hovered?`0 8px 24px ${tool.color}18`:'none', cursor:'default' }}
-      >
-        {/* Color top bar */}
-        <div style={{ height:'3px', background:`linear-gradient(90deg, ${tool.color}, ${tool.color}60)` }}/>
+    <div style={{ background:C.surface, borderRadius:14, border:`1px solid ${C.border}`, boxShadow:C.sh, padding:'18px 20px', ...style }}>
+      {children}
+    </div>
+  )
+}
 
-        <div style={{ padding:'13px 14px' }}>
-          {/* Icon + badge */}
-          <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:'8px' }}>
-            <div style={{ width:'42px', height:'42px', borderRadius:'11px', background:tool.bg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'21px' }}>
-              {tool.icon}
-            </div>
-            {tool.badge && (
-              <span style={{ fontSize:'8px', fontWeight:700, padding:'2px 6px', borderRadius:'20px', background:tool.badgeBg??tool.color, color:'#fff', marginTop:'3px', whiteSpace:'nowrap' }}>
-                {tool.badge}
-              </span>
-            )}
+// ── KPI card (no trend palsu) ─────────────────────────────────
+function KpiCard({ label, value, sub, icon, color, loading, unlimited }: {
+  label:string; value:string; sub:string; icon:string; color:string;
+  loading:boolean; unlimited?:boolean
+}) {
+  return (
+    <div style={{ background:C.surface, borderRadius:14, border:`1px solid ${C.border}`, boxShadow:C.sh, padding:'16px 18px' }}>
+      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:10 }}>
+        <div style={{ width:38, height:38, borderRadius:10, background:`${color}15`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:19 }}>{icon}</div>
+        {!loading && unlimited && (
+          <div style={{ fontSize:11, fontWeight:700, color:C.amberDk, padding:'2px 7px', borderRadius:99, background:C.amberLt, display:'inline-flex', alignItems:'center', gap:3 }}>
+            <InfinityIcon size={10}/>
           </div>
+        )}
+      </div>
+      {loading
+        ? <><Sk h="26px" w="80px" r="5px"/><div style={{ marginTop:5 }}><Sk h="11px" w="120px" r="4px"/></div></>
+        : <>
+            <div style={{ fontSize:22, fontWeight:800, color:C.ink, letterSpacing:'-0.03em', lineHeight:1, marginBottom:3 }}>{value}</div>
+            <div style={{ fontSize:12, fontWeight:600, color:C.inkMuted }}>{label}</div>
+            <div style={{ fontSize:10, color:C.inkDim, marginTop:2 }}>{sub}</div>
+          </>}
+    </div>
+  )
+}
 
-          {/* Label */}
-          <div style={{ fontSize:'13px', fontWeight:700, color:C.slate900, marginBottom:'3px' }}>{tool.label}</div>
-          <div style={{ fontSize:'11px', color:C.slate500, lineHeight:1.4, marginBottom:'10px' }}>{tool.tagline}</div>
-
-          {/* Preset pills (first 3) */}
-          <div style={{ display:'flex', gap:'4px', flexWrap:'wrap', marginBottom:'10px' }}>
-            {tool.presets.slice(0,3).map(p => (
-              <span key={p} style={{ fontSize:'9px', padding:'2px 7px', borderRadius:'20px', background:tool.bg, color:tool.color, fontWeight:600 }}>{p}</span>
-            ))}
-            {tool.presets.length > 3 && (
-              <span style={{ fontSize:'9px', padding:'2px 7px', borderRadius:'20px', background:C.slate100, color:C.slate500, fontWeight:500 }}>+{tool.presets.length-3}</span>
-            )}
-          </div>
-
-          {/* Action row */}
-          <div style={{ display:'flex', gap:'6px' }}>
-            {/* Info popup button */}
-            <button
-              onClick={() => onInfoClick(tool, ref)}
-              style={{ padding:'7px 10px', borderRadius:'8px', border:`1.5px solid ${C.slate200}`, background:C.white, fontSize:'11px', fontWeight:600, color:C.slate500, cursor:'pointer', display:'flex', alignItems:'center', gap:'4px', transition:'all .12s' }}
-              onMouseEnter={e => { (e.currentTarget).style.borderColor = tool.color; (e.currentTarget).style.color = tool.color; (e.currentTarget).style.background = tool.bg }}
-              onMouseLeave={e => { (e.currentTarget).style.borderColor = C.slate200; (e.currentTarget).style.color = C.slate500; (e.currentTarget).style.background = C.white }}
-              title="Lihat penjelasan lengkap"
-            >
-              ℹ️ Info
-            </button>
-
-            {/* Go to tool */}
-            <Link href={tool.href} style={{ flex:1, textDecoration:'none' }}>
-              <button style={{ width:'100%', padding:'7px', borderRadius:'8px', border:'none', background:`linear-gradient(135deg, ${tool.color}, ${tool.color}cc)`, color:'#fff', fontSize:'11px', fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'4px', boxShadow:`0 2px 8px ${tool.color}30`, fontFamily:"'DM Sans',sans-serif" }}>
-                Buka <ChevronRight size={11}/>
-              </button>
-            </Link>
-          </div>
-        </div>
+// ── Quota ring ────────────────────────────────────────────────
+function QuotaRing({ pct, label, color, sub }: { pct:number; label:string; color:string; sub:string }) {
+  const r=28, c=2*Math.PI*r, dash=(pct/100)*c
+  return (
+    <div style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 12px', borderRadius:10, background:C.bg, border:`1px solid ${C.border}` }}>
+      <svg width="68" height="68" viewBox="0 0 72 72" style={{ transform:'rotate(-90deg)', flexShrink:0 }}>
+        <circle cx="36" cy="36" r={r} fill="none" stroke={`${color}20`} strokeWidth="5"/>
+        <circle cx="36" cy="36" r={r} fill="none" stroke={color} strokeWidth="5" strokeDasharray={`${dash} ${c}`} strokeLinecap="round" style={{ transition:'stroke-dasharray .6s' }}/>
+      </svg>
+      <div>
+        <div style={{ fontSize:20, fontWeight:800, color:C.ink, letterSpacing:'-0.03em' }}>{pct}%</div>
+        <div style={{ fontSize:11, fontWeight:600, color:C.inkMuted, marginTop:1 }}>{label}</div>
+        <div style={{ fontSize:10, color:C.inkDim, marginTop:1 }}>{sub}</div>
       </div>
     </div>
   )
 }
 
-// ── AI Image Generator Section ────────────────────────────────
-function AIImageSection() {
-  const [activePopup, setActivePopup] = useState<typeof IMAGE_TOOLS[0] | null>(null)
-  const [anchorRef, setAnchorRef] = useState<React.RefObject<HTMLDivElement> | null>(null)
-
-  const handleInfo = (tool: typeof IMAGE_TOOLS[0], ref: React.RefObject<HTMLDivElement>) => {
-    setActivePopup(tool)
-    setAnchorRef(ref)
-  }
-
+function ChartTip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null
   return (
-    <>
-      {/* Section header */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'12px' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
-          <div style={{ width:'28px', height:'28px', borderRadius:'8px', background:'linear-gradient(135deg,#2563EB,#7C3AED)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'14px' }}>🖼️</div>
-          <div>
-            <div style={{ fontSize:'13px', fontWeight:700, color:C.slate900 }}>AI Image Generator</div>
-            <div style={{ fontSize:'10px', color:C.slate500 }}>7 fitur · Klik ℹ️ untuk penjelasan lengkap</div>
-          </div>
+    <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:9, padding:'9px 12px', boxShadow:C.sm, fontSize:12 }}>
+      <div style={{ fontWeight:700, color:C.ink, marginBottom:4 }}>{label}</div>
+      {payload.map((p:any, i:number) => (
+        <div key={i} style={{ color:p.color, display:'flex', gap:6, alignItems:'center', marginTop:2 }}>
+          <div style={{ width:7, height:7, borderRadius:'50%', background:p.color, flexShrink:0 }}/>
+          {p.name}: <strong>{p.value}</strong>
         </div>
-        <Link href="/studio" style={{ fontSize:'11px', color:C.brand, fontWeight:600, textDecoration:'none', display:'flex', alignItems:'center', gap:'3px' }}>
-          Lihat semua <ChevronRight size={11}/>
-        </Link>
-      </div>
-
-      {/* Tools grid */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(min(100%, 185px), 1fr))', gap:'10px', marginBottom:'8px' }}>
-        {IMAGE_TOOLS.map((t, i) => (
-          <ImageToolCard key={i} tool={t} onInfoClick={handleInfo}/>
-        ))}
-      </div>
-
-      {/* Hint text */}
-      <div style={{ textAlign:'center', fontSize:'11px', color:C.slate400, marginBottom:'4px' }}>
-        💡 Klik tombol <b>ℹ️ Info</b> pada setiap fitur untuk melihat penjelasan, contoh use case, dan preset lengkap
-      </div>
-
-      {/* Popup */}
-      {activePopup && anchorRef && (
-        <ToolPopup
-          tool={activePopup}
-          onClose={() => { setActivePopup(null); setAnchorRef(null) }}
-          anchorRef={anchorRef as React.RefObject<HTMLDivElement>}
-        />
-      )}
-    </>
+      ))}
+    </div>
   )
 }
 
-// ── MAIN DASHBOARD ─────────────────────────────────────────────
-export default function DashboardPage() {
-  const { data:d, isLoading, refetch, isFetching } = useDashboard()
-  const [copied, setCopied] = useState<string|null>(null)
+// ── Empty state component ─────────────────────────────────────
+function EmptyState({ icon, title, desc, cta }: { icon:string; title:string; desc:string; cta?:{label:string;href:string} }) {
+  return (
+    <div style={{ padding:'24px 16px', textAlign:'center', borderRadius:11, background:C.bg, border:`1px dashed ${C.border}` }}>
+      <div style={{ fontSize:32, marginBottom:8 }}>{icon}</div>
+      <div style={{ fontSize:13, fontWeight:700, color:C.ink, marginBottom:3 }}>{title}</div>
+      <div style={{ fontSize:11, color:C.inkMuted, lineHeight:1.5, marginBottom:cta?12:0 }}>{desc}</div>
+      {cta && (
+        <Link href={cta.href} style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'7px 14px', borderRadius:8, background:`linear-gradient(135deg,${C.amber},${C.amberDk})`, color:'#fff', fontSize:12, fontWeight:700, textDecoration:'none' }}>
+          {cta.label} <ArrowRight size={11}/>
+        </Link>
+      )}
+    </div>
+  )
+}
 
-  const greeting = (() => {
-    const h = new Date().getHours()
-    if (h < 11) return 'Selamat pagi'
-    if (h < 15) return 'Selamat siang'
-    if (h < 18) return 'Selamat sore'
-    return 'Selamat malam'
-  })()
+// ── Quick actions (navigasi statis — bukan data user) ────────
+const QUICK_ACTIONS_AI = [
+  { href:'/studio/image/packshot',        icon:'📦', label:'AI Packshot',     desc:'Foto produk profesional',  color:C.purple,  bg:C.purpleLt },
+  { href:'/studio/image/product-to-model',icon:'🧑',  label:'To Model',        desc:'Produk ke foto model',     color:'#DB2777', bg:'#FDF2F8'  },
+  { href:'/studio/image/enhancer',        icon:'✨',  label:'Product Enhancer',desc:'20 preset visual iklan',   color:C.amber,   bg:C.amberXlt },
+  { href:'/studio/video/ugc',             icon:'🎬',  label:'UGC Video',       desc:'Video konten creator',     color:C.green,   bg:C.greenLt  },
+  { href:'/studio/video/tiktok',          icon:'🎵',  label:'TikTok Reels',    desc:'Reels script + video',     color:'#010101', bg:'#F3F4F6'  },
+  { href:'/studio/video/generator',       icon:'🎥',  label:'AI Video Gen',    desc:'7-step video wizard',      color:C.blue,    bg:C.blueLt   },
+  { href:'/marketing-kit?t=caption',      icon:'✍️',  label:'Caption AI',      desc:'Caption siap post',        color:C.orange,  bg:C.orangeLt },
+  { href:'/quick-tools',                  icon:'⚡',  label:'Quick Tools',     desc:'Remove BG, resize, dll',   color:C.sky,     bg:C.skyLt    },
+]
 
-  const copyText = useCallback(async (text:string, id:string) => {
-    try { await navigator.clipboard.writeText(text); setCopied(id); setTimeout(()=>setCopied(null),2000) } catch {}
+const QUICK_ACTIONS_ADS = [
+  { href:'/campaign',         icon:'📢', label:'Campaign Builder', desc:'Meta + TikTok + Google',   color:'#2563EB', bg:C.blueLt    },
+  { href:'/audience',         icon:'🎯', label:'Audience Intel',   desc:'Lookalike · Interest',      color:C.purple,  bg:C.purpleLt  },
+  { href:'/budget-optimizer', icon:'💰', label:'Budget Optimizer', desc:'ROAS + Auto-Bidding',       color:C.green,   bg:C.greenLt   },
+  { href:'/analytics',        icon:'📊', label:'Analytics AI',     desc:'BeeScore™ · Insights',      color:C.amber,   bg:C.amberXlt  },
+  { href:'/scheduler',        icon:'📅', label:'Scheduler',        desc:'6 platform · Auto-Repost',  color:C.sky,     bg:C.skyLt     },
+  { href:'/help',             icon:'❓', label:'Help Center',      desc:'Panduan semua fitur',        color:C.inkMuted,bg:C.bg        },
+]
+
+// ══════════════════════════════════════════════════════════════
+export default function DashboardHome() {
+  const { isSuperuser, role } = useUserRole()
+  const { tier: dailyTier }   = useDailyUsage()
+
+  const [loading,   setLoading]   = useState(true)
+  const [error,     setError]     = useState('')
+  const [chartType, setChartType] = useState<'area'|'bar'>('area')
+  const [activeTab, setActiveTab] = useState<'ai'|'ads'>('ai')
+  const [data,      setData]      = useState<any>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true); setError('')
+    try {
+      const r = await fetch('/api/dashboard/summary', { credentials:'include' })
+      if (!r.ok) throw new Error(`HTTP ${r.status}`)
+      setData(await r.json())
+    } catch (e:any) {
+      setError(e?.message ?? 'Gagal memuat data')
+    } finally { setLoading(false) }
   }, [])
 
-  const dailyPct   = d?.dailyMax   ? Math.min(Math.round((d.dailyUsed??0)   /d.dailyMax  *100),100) : 0
-  const monthlyPct = d?.monthlyMax ? Math.min(Math.round((d.monthlyUsed??0) /d.monthlyMax*100),100) : 0
-  const isFree     = d?.store?.plan === 'free' || d?.store?.plan === 'starter'
+  useEffect(() => { load() }, [load])
+
+  // Sumber tier final (prioritas: response API > useDailyUsage)
+  const tier = (data?.tier ?? dailyTier ?? 'starter').toString().toLowerCase()
+
+  const counts  = data?.counts  ?? { image:0, video:0, text:0, total:0 }
+  const credit  = data?.credit  ?? { balance:0, quota:0, used:0 }
+  const chartD  = data?.chartData ?? Array.from({length:7}, (_, i) => {
+    const d = new Date(); d.setDate(d.getDate() - (6 - i))
+    return { day: d.toLocaleDateString('id-ID', {weekday:'short'}), gambar:0, video:0, teks:0 }
+  })
+  const recent   = data?.recent   ?? []
+  const upcoming = data?.upcoming ?? []
+
+  const hour     = new Date().getHours()
+  const greeting = hour < 11 ? '🌅 Selamat pagi' : hour < 15 ? '☀️ Selamat siang' : hour < 18 ? '🌤️ Selamat sore' : '🌙 Selamat malam'
+  const todayStr = new Date().toLocaleDateString('id-ID', { weekday:'long', day:'numeric', month:'long' })
+  const tierLabel = (tier.charAt(0).toUpperCase() + tier.slice(1))
+
+  // Quota %
+  const creditPct = credit.quota > 0
+    ? Math.min(100, Math.round((credit.used / credit.quota) * 100))
+    : 0
+  const lowCredit = !isSuperuser && credit.quota > 0 && credit.balance < credit.quota * 0.2
+
+  const hasAnyData = counts.total > 0 || recent.length > 0
+  const chartTotal = chartD.reduce((s:number, d:any) => s + d.gambar + d.video + d.teks, 0)
 
   return (
-    <div style={{ maxWidth:'1100px', margin:'0 auto', fontFamily:"'DM Sans',sans-serif" }}>
+    <div style={{ maxWidth:1160, margin:'0 auto', fontFamily:"'DM Sans',system-ui,sans-serif" }}>
 
-      {/* ── GREETING ─────────────────────────────────────────── */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'22px', flexWrap:'wrap', gap:'10px' }}>
+      {/* ── HEADER ───────────────────────────────────────── */}
+      <div style={{ marginBottom:22, display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
         <div>
-          {isLoading ? (<><Shimmer w="190px" h="26px" r="5px"/><div style={{marginTop:'5px'}}><Shimmer w="250px" h="13px" r="4px"/></div></>) : (
-            <>
-              <h1 style={{ fontFamily:"'Fraunces',Georgia,serif", fontSize:'clamp(20px,3.5vw,28px)', fontWeight:600, color:C.slate900, letterSpacing:'-0.02em', marginBottom:'3px' }}>
-                {greeting}, {d?.user?.name?.split(' ')[0] || 'Seller'} 👋
-              </h1>
-              <p style={{ fontSize:'13px', color:C.slate500 }}>
-                {d?.store?.niche
-                  ? <>{NICHE_EMOJI[d.store.niche]||'🏪'} {d.store.name} · {SELLER_LABEL[d.store.sellerType||'']||'Seller'}</>
-                  : 'Selamat datang di BeeSell AI — AI Sales Platform untuk Seller & Affiliator Indonesia'}
-              </p>
-            </>
-          )}
+          <h1 style={{ fontSize:'clamp(18px,2.5vw,24px)', fontWeight:800, color:C.ink, letterSpacing:'-0.03em', marginBottom:3 }}>
+            {greeting}, {isSuperuser ? 'Admin' : 'Seller'} 👋
+          </h1>
+          <p style={{ fontSize:13, color:C.inkMuted, margin:0 }}>
+            {todayStr} · {isSuperuser ? 'Mode SUPERUSER — akses penuh.' : 'BeeSell AI siap membantu kamu jualan lebih cepat.'}
+          </p>
         </div>
-        <div style={{ display:'flex', gap:'8px', alignItems:'center' }}>
-          {d && (
-            <span style={{ padding:'3px 10px', borderRadius:'20px', fontSize:'10px', fontWeight:700, background:isFree?C.slate100:C.pur50, color:isFree?C.slate500:PLAN_COLOR[d.store.plan]||C.slate500, border:`1px solid ${isFree?C.slate200:'#DDD6FE'}` }}>
-              {d.store.planLabel}
-            </span>
-          )}
-          <button onClick={()=>refetch()} disabled={isFetching} style={{ width:'32px', height:'32px', borderRadius:'8px', border:`1px solid ${C.slate200}`, background:C.white, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
-            <RefreshCw size={13} color={C.slate400} style={{ animation:isFetching?'spin 1s linear infinite':'none' }}/>
+        <div style={{ display:'flex', gap:8, flexShrink:0, alignItems:'center' }}>
+          <button onClick={load} title="Refresh"
+            style={{ display:'flex', alignItems:'center', gap:5, padding:'7px 12px', borderRadius:9, border:`1px solid ${C.border}`, background:C.surface, color:C.inkMuted, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', boxShadow:C.sh }}>
+            <RefreshCw size={12}/> Refresh
           </button>
-        </div>
-      </div>
-
-      {/* ── QUICK TOOLS ──────────────────────────────────────── */}
-      <div style={{ marginBottom:'22px' }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'10px' }}>
-          <div style={{ fontSize:'12px', fontWeight:700, color:C.slate500, textTransform:'uppercase', letterSpacing:'0.08em', display:'flex', alignItems:'center', gap:'6px' }}>
-            <Zap size={12} color={C.amber}/> Quick Tools — Visual AI
-          </div>
-          <Link href="/quick-tools" style={{ fontSize:'11px', color:C.brand, fontWeight:600, textDecoration:'none', display:'flex', alignItems:'center', gap:'3px' }}>Semua tools <ChevronRight size={11}/></Link>
-        </div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(min(100%, 185px), 1fr))', gap:'8px' }}>
-          {QUICK_TOOLS.map((t, i) => (
-            <Link key={i} href={t.href} style={{ textDecoration:'none' }}>
-              <div style={{ padding:'12px 13px', borderRadius:'12px', background:C.white, border:`1.5px solid ${C.slate200}`, cursor:'pointer', transition:'all .13s', position:'relative', overflow:'hidden' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor=t.color; (e.currentTarget as HTMLElement).style.boxShadow=`0 4px 14px ${t.color}20`; (e.currentTarget as HTMLElement).style.transform='translateY(-1px)' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor=C.slate200; (e.currentTarget as HTMLElement).style.boxShadow='none'; (e.currentTarget as HTMLElement).style.transform='translateY(0)' }}
-              >
-                {t.badge && <div style={{ position:'absolute', top:'8px', right:'8px', fontSize:'8px', fontWeight:700, padding:'2px 6px', borderRadius:'20px', background:t.color, color:'#fff' }}>{t.badge}</div>}
-                <div style={{ width:'38px', height:'38px', borderRadius:'10px', background:t.bg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'19px', marginBottom:'7px' }}>{t.icon}</div>
-                <div style={{ fontSize:'12px', fontWeight:700, color:C.slate900, marginBottom:'2px' }}>{t.label}</div>
-                <div style={{ fontSize:'10px', color:C.slate400, lineHeight:1.3 }}>{t.desc}</div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      {/* ── RESIZE SMART BANNER ──────────────────────────────── */}
-      <Link href="/quick-tools/resize" style={{ textDecoration:'none', display:'block', marginBottom:'22px' }}>
-        <div style={{ padding:'14px 18px', borderRadius:'15px', background:'linear-gradient(135deg, #059669 0%, #0D9488 50%, #0891B2 100%)', color:'#fff', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'12px', boxShadow:'0 4px 18px rgba(5,150,105,.22)', cursor:'pointer', transition:'all .15s' }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 8px 26px rgba(5,150,105,.32)' }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform='translateY(0)'; (e.currentTarget as HTMLElement).style.boxShadow='0 4px 18px rgba(5,150,105,.22)' }}
-        >
-          <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
-            <div style={{ width:'44px', height:'44px', borderRadius:'12px', background:'rgba(255,255,255,.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'22px', flexShrink:0 }}>📐</div>
-            <div>
-              <div style={{ display:'flex', alignItems:'center', gap:'7px', marginBottom:'2px' }}>
-                <span style={{ fontSize:'14px', fontWeight:700 }}>Resize Smart AI</span>
-                <span style={{ fontSize:'9px', fontWeight:700, padding:'2px 7px', borderRadius:'20px', background:'rgba(255,255,255,.25)' }}>NEW</span>
-              </div>
-              <div style={{ fontSize:'11px', opacity:.85 }}>1 foto → Shopee, Tokopedia, Instagram, TikTok + 15 platform — otomatis</div>
-            </div>
-          </div>
-          <div style={{ padding:'7px 14px', borderRadius:'9px', background:'rgba(255,255,255,.2)', fontSize:'12px', fontWeight:700, flexShrink:0, display:'flex', alignItems:'center', gap:'5px', whiteSpace:'nowrap' }}>
-            Coba <ChevronRight size={12}/>
-          </div>
-        </div>
-      </Link>
-
-      {/* ── AI IMAGE GENERATOR ─────────────────────────────── */}
-      <div style={{ marginBottom:'24px' }}>
-        <AIImageSection/>
-      </div>
-
-      {/* ── QUOTA + STATS ─────────────────────────────────────── */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(min(100%, 260px), 1fr))', gap:'10px', marginBottom:'22px' }}>
-        <div style={{ padding:'16px', borderRadius:'14px', background:C.white, border:`1px solid ${dailyPct>=100?C.red+'40':C.slate200}` }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'10px' }}>
-            <div>
-              <div style={{ fontSize:'10px', fontWeight:700, color:C.slate400, textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:'4px' }}>Kuota Hari Ini</div>
-              {isLoading ? <Shimmer w="80px" h="24px"/> : (
-                <div style={{ fontSize:'24px', fontWeight:800, color:dailyPct>=100?C.red:C.slate900, lineHeight:1 }}>
-                  {d?.dailyUsed??0}<span style={{ fontSize:'13px', color:C.slate400, fontWeight:400 }}>/{d?.dailyMax??3}</span>
-                </div>
-              )}
-            </div>
-            <div style={{ width:'40px', height:'40px', borderRadius:'50%', background:`conic-gradient(${dailyPct>=100?C.red:C.brand} ${dailyPct*3.6}deg, ${C.slate100} 0deg)`, display:'flex', alignItems:'center', justifyContent:'center' }}>
-              <div style={{ width:'28px', height:'28px', borderRadius:'50%', background:C.white, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'9px', fontWeight:700, color:C.slate700 }}>{dailyPct}%</div>
-            </div>
-          </div>
-          <div style={{ height:'4px', borderRadius:'2px', background:C.slate100, overflow:'hidden', marginBottom:'5px' }}>
-            <div style={{ height:'100%', width:`${dailyPct}%`, background:dailyPct>=100?C.red:C.brand, borderRadius:'2px', transition:'width .5s' }}/>
-          </div>
-          <div style={{ fontSize:'10px', color:C.slate400 }}>Reset: {d?.dailyReset??'Tengah malam WIB'}</div>
-        </div>
-
-        <div style={{ padding:'16px', borderRadius:'14px', background:C.white, border:`1px solid ${monthlyPct>=90?C.amber+'40':C.slate200}` }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'10px' }}>
-            <div>
-              <div style={{ fontSize:'10px', fontWeight:700, color:C.slate400, textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:'4px' }}>Kuota Bulan Ini</div>
-              {isLoading ? <Shimmer w="80px" h="24px"/> : (
-                <div style={{ fontSize:'24px', fontWeight:800, color:monthlyPct>=90?C.amber:C.slate900, lineHeight:1 }}>
-                  {d?.monthlyUsed??0}<span style={{ fontSize:'13px', color:C.slate400, fontWeight:400 }}>/{d?.monthlyMax??50}</span>
-                </div>
-              )}
-            </div>
-            <div style={{ width:'40px', height:'40px', borderRadius:'50%', background:`conic-gradient(${monthlyPct>=90?C.amber:C.purple} ${monthlyPct*3.6}deg, ${C.slate100} 0deg)`, display:'flex', alignItems:'center', justifyContent:'center' }}>
-              <div style={{ width:'28px', height:'28px', borderRadius:'50%', background:C.white, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'9px', fontWeight:700, color:C.slate700 }}>{monthlyPct}%</div>
-            </div>
-          </div>
-          <div style={{ height:'4px', borderRadius:'2px', background:C.slate100, overflow:'hidden', marginBottom:'5px' }}>
-            <div style={{ height:'100%', width:`${monthlyPct}%`, background:monthlyPct>=90?C.amber:C.purple, borderRadius:'2px', transition:'width .5s' }}/>
-          </div>
-          <div style={{ fontSize:'10px', color:C.slate400 }}>Reset: {d?.monthlyReset??'—'}</div>
-        </div>
-
-        <div style={{ padding:'16px', borderRadius:'14px', background:C.white, border:`1px solid ${C.slate200}`, display:'flex', flexDirection:'column', gap:'10px' }}>
-          {[
-            { l:'Caption dibuat',   v:d?.captionsGenerated??0, ic:'✍️', c:C.brand,  bg:C.brand50 },
-            { l:'Gambar dibuat',    v:d?.imageCount??0,        ic:'📸', c:C.purple, bg:C.pur50 },
-            { l:'Konten bulan ini', v:d?.contentsThisMonth??0, ic:'📅', c:C.green,  bg:C.grn50 },
-          ].map((s,i) => (
-            <div key={i} style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-              <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
-                <div style={{ width:'26px', height:'26px', borderRadius:'7px', background:s.bg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'12px' }}>{s.ic}</div>
-                <span style={{ fontSize:'12px', color:C.slate600 }}>{s.l}</span>
-              </div>
-              {isLoading ? <Shimmer w="24px" h="14px"/> : <span style={{ fontSize:'16px', fontWeight:800, color:C.slate900 }}>{s.v}</span>}
-            </div>
-          ))}
-        </div>
-
-        {isFree && !isLoading && (
-          <Link href="/billing" style={{ textDecoration:'none' }}>
-            <div style={{ padding:'16px', borderRadius:'14px', background:'linear-gradient(135deg, #1E1B4B, #7C3AED)', color:C.white, height:'100%', boxSizing:'border-box', display:'flex', flexDirection:'column', justifyContent:'space-between', minHeight:'120px', boxShadow:'0 4px 14px rgba(124,58,237,.25)', cursor:'pointer' }}>
-              <div>
-                <div style={{ fontSize:'20px', marginBottom:'6px' }}>🚀</div>
-                <div style={{ fontSize:'13px', fontWeight:700, marginBottom:'3px' }}>Upgrade ke Basic</div>
-                <div style={{ fontSize:'11px', opacity:.8 }}>15 caption/hari + gambar AI + scheduler</div>
-              </div>
-              <div style={{ display:'flex', alignItems:'center', gap:'4px', fontSize:'11px', fontWeight:700, marginTop:'12px', opacity:.9 }}>
-                Dari Rp 99K/bln <ArrowRight size={11}/>
-              </div>
-            </div>
+          <Link href="/billing" style={{ display:'flex', alignItems:'center', gap:5, padding:'7px 13px', borderRadius:9, border:`1px solid ${isSuperuser?C.amber+'60':C.border}`, background: isSuperuser ? `linear-gradient(135deg,${C.amber}15,${C.amberLt})` : C.surface, color: isSuperuser ? C.amberDk : C.inkMuted, fontSize:12, fontWeight:600, textDecoration:'none', boxShadow:C.sh }}>
+            <Crown size={13} color={C.amber}/> {isSuperuser ? 'SUPERUSER' : `Plan ${tierLabel}`}
           </Link>
-        )}
-      </div>
-
-      {/* ── CHART ──────────────────────────────────────────────── */}
-      <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) minmax(0,220px)', gap:'10px', marginBottom:'22px' }}>
-        <div style={{ padding:'18px', borderRadius:'14px', background:C.white, border:`1px solid ${C.slate200}`, minWidth:0 }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'14px' }}>
-            <div>
-              <div style={{ fontSize:'13px', fontWeight:700, color:C.slate900 }}>Aktivitas 14 Hari</div>
-              <div style={{ fontSize:'11px', color:C.slate400 }}>Caption + Gambar dibuat</div>
-            </div>
-            <div style={{ display:'flex', gap:'10px', fontSize:'9px', color:C.slate400 }}>
-              <span style={{ display:'flex', alignItems:'center', gap:'3px' }}><span style={{ width:'7px', height:'7px', borderRadius:'2px', background:C.brand, display:'inline-block' }}/>Caption</span>
-              <span style={{ display:'flex', alignItems:'center', gap:'3px' }}><span style={{ width:'7px', height:'7px', borderRadius:'2px', background:C.purple, display:'inline-block' }}/>Gambar</span>
-            </div>
-          </div>
-          {isLoading ? <Shimmer h="120px" r="8px"/> : (
-            <ResponsiveContainer width="100%" height={120}>
-              <BarChart data={d?.chartData?.slice(-14)??[]} barGap={2}>
-                <XAxis dataKey="label" tick={{ fontSize:8, fill:C.slate400 }} axisLine={false} tickLine={false} interval={2}/>
-                <YAxis hide allowDecimals={false}/>
-                <Tooltip contentStyle={{ borderRadius:'8px', border:`1px solid ${C.slate200}`, fontSize:'11px', fontFamily:"'DM Sans',sans-serif" }} formatter={(v, n) => [
-                  v ?? 0,
-                  n === 'captions' ? 'Caption' : 'Gambar',
-                ]}/>
-                <Bar dataKey="captions" fill={C.brand}  radius={[3,3,0,0]} maxBarSize={18}/>
-                <Bar dataKey="images"   fill={C.purple} radius={[3,3,0,0]} maxBarSize={18}/>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-
-        <div style={{ padding:'18px', borderRadius:'14px', background:C.white, border:`1px solid ${C.slate200}` }}>
-          <div style={{ fontSize:'13px', fontWeight:700, color:C.slate900, marginBottom:'4px' }}>Per Platform</div>
-          <div style={{ fontSize:'10px', color:C.slate400, marginBottom:'14px' }}>Distribusi konten</div>
-          {isLoading ? (
-            <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>{[1,2,3].map(i=><Shimmer key={i} h="28px" r="6px"/>)}</div>
-          ) : (d?.platformStats?.length??0)===0 ? (
-            <div style={{ textAlign:'center', padding:'20px 0', color:C.slate400, fontSize:'12px' }}>
-              <div style={{ fontSize:'24px', marginBottom:'5px' }}>📭</div>Belum ada data
-            </div>
-          ) : (
-            d!.platformStats.slice(0,4).map((p,i)=>{
-              const pct = d!.platformStats[0].count>0 ? Math.round(p.count/d!.platformStats[0].count*100) : 0
-              return (
-                <div key={i} style={{ marginBottom:'10px' }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'3px' }}>
-                    <span style={{ fontSize:'11px', color:C.slate700 }}>{PLATFORM_EMOJI[p.platform||'']||'📱'} {p.platform||'Lainnya'}</span>
-                    <span style={{ fontSize:'11px', fontWeight:700, color:C.slate900 }}>{p.count}</span>
-                  </div>
-                  <div style={{ height:'3px', borderRadius:'2px', background:C.slate100 }}>
-                    <div style={{ height:'100%', width:`${pct}%`, background:[C.brand,C.purple,C.green,C.amber][i]||C.brand, borderRadius:'2px' }}/>
-                  </div>
-                </div>
-              )
-            })
-          )}
-        </div>
-      </div>
-
-      {/* ── RECENT ───────────────────────────────────────────── */}
-      <div style={{ marginBottom:'22px' }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'10px' }}>
-          <div style={{ fontSize:'12px', fontWeight:700, color:C.slate500, textTransform:'uppercase', letterSpacing:'0.08em', display:'flex', alignItems:'center', gap:'6px' }}>
-            <Archive size={12} color={C.slate400}/> Konten Terbaru
-          </div>
-          <Link href="/library" style={{ fontSize:'11px', color:C.brand, fontWeight:600, textDecoration:'none', display:'flex', alignItems:'center', gap:'3px' }}>
-            Lihat semua <ChevronRight size={11}/>
+          <Link href="/studio" style={{ display:'flex', alignItems:'center', gap:5, padding:'7px 14px', borderRadius:9, background:`linear-gradient(135deg,${C.amber},${C.amberDk})`, color:'#fff', fontSize:12, fontWeight:700, textDecoration:'none', boxShadow:C.sa }}>
+            <Sparkles size={13}/> Buat Konten
           </Link>
         </div>
-        {isLoading ? (
-          <div style={{ display:'flex', flexDirection:'column', gap:'7px' }}>{[1,2,3].map(i=><Shimmer key={i} h="54px" r="10px"/>)}</div>
-        ) : (d?.recentContents?.length??0)===0 ? (
-          <div style={{ padding:'28px', textAlign:'center', borderRadius:'14px', border:`1.5px dashed ${C.slate200}`, background:C.slate50 }}>
-            <div style={{ fontSize:'28px', marginBottom:'8px' }}>✨</div>
-            <div style={{ fontSize:'14px', fontWeight:700, color:C.slate900, marginBottom:'4px' }}>Belum ada konten</div>
-            <div style={{ fontSize:'12px', color:C.slate500, marginBottom:'14px' }}>Mulai dari AI Image Generator untuk buat visual pertamamu</div>
-            <Link href="/studio" style={{ padding:'8px 18px', background:`linear-gradient(135deg,${C.brand},${C.brand700})`, color:C.white, textDecoration:'none', borderRadius:'10px', fontSize:'12px', fontWeight:700 }}>
-              🎨 Buka AI Studio
-            </Link>
+      </div>
+
+      {/* Error banner */}
+      {error && (
+        <div style={{ padding:'10px 14px', background:C.redLt, border:`1px solid ${C.red}30`, borderRadius:10, marginBottom:14, fontSize:12, color:C.red, display:'flex', alignItems:'center', gap:7 }}>
+          <AlertTriangle size={13}/> {error}
+        </div>
+      )}
+
+      {/* ── KPI ROW (data nyata, tanpa trend palsu) ───────── */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:18 }} className="kpi-strip">
+        <KpiCard
+          label="Gambar AI" icon="🖼️" color={C.amber} loading={loading}
+          value={String(counts.image)}
+          sub={counts.image === 0 ? 'Belum ada — buat sekarang' : '30 hari terakhir'}
+          unlimited={isSuperuser}
+        />
+        <KpiCard
+          label="Video AI" icon="🎬" color={C.purple} loading={loading}
+          value={String(counts.video)}
+          sub={counts.video === 0 ? 'Belum ada — buat sekarang' : '30 hari terakhir'}
+          unlimited={isSuperuser}
+        />
+        <KpiCard
+          label="Caption & Teks" icon="✍️" color={C.blue} loading={loading}
+          value={String(counts.text)}
+          sub={counts.text === 0 ? 'Belum ada — buat sekarang' : '30 hari terakhir'}
+          unlimited={isSuperuser}
+        />
+        <KpiCard
+          label="Total Konten" icon="📦" color={C.green} loading={loading}
+          value={String(counts.total)}
+          sub={counts.total === 0 ? 'Mulai dari Studio →' : '30 hari terakhir'}
+          unlimited={isSuperuser}
+        />
+      </div>
+
+      {/* ── QUICK ACTIONS ─────────────────────────────────── */}
+      <Card style={{ marginBottom:18, padding:'16px 20px' }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
+          <div style={{ fontSize:14, fontWeight:700, color:C.ink }}>🚀 Aksi Cepat</div>
+          <div style={{ display:'flex', gap:3, background:C.bg, padding:2, borderRadius:8, border:`1px solid ${C.border}` }}>
+            {([['ai','🎨 AI Studio'],['ads','📢 Ads & Grow']] as const).map(([t,l]) => (
+              <button key={t} type="button" onClick={() => setActiveTab(t)}
+                style={{ padding:'5px 12px', borderRadius:6, border:'none', background:activeTab===t?C.surface:'transparent', fontSize:11, fontWeight:activeTab===t?700:500, color:activeTab===t?C.ink:C.inkMuted, cursor:'pointer', fontFamily:'inherit', boxShadow:activeTab===t?C.sh:'none' }}>
+                {l}
+              </button>
+            ))}
           </div>
-        ) : (
-          <div style={{ display:'flex', flexDirection:'column', gap:'7px' }}>
-            {d!.recentContents.map(c=>(
-              <div key={c.id} style={{ display:'flex', alignItems:'center', gap:'10px', padding:'10px 13px', borderRadius:'11px', background:C.white, border:`1px solid ${C.slate200}`, transition:'all .12s' }}
-                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.brand100;(e.currentTarget as HTMLElement).style.boxShadow='0 2px 8px rgba(37,99,235,.06)'}}
-                onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.slate200;(e.currentTarget as HTMLElement).style.boxShadow='none'}}
-              >
-                <div style={{ width:'36px', height:'36px', borderRadius:'8px', flexShrink:0, overflow:'hidden', background:c.type==='image'?C.pur50:C.brand50, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  {c.media_url?<img src={c.media_url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>:c.type==='image'?<ImageIcon size={15} color={C.purple}/>:<FileText size={15} color={C.brand}/>}
-                </div>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontSize:'13px', fontWeight:600, color:C.slate900, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.title}</div>
-                  <div style={{ display:'flex', alignItems:'center', gap:'5px', marginTop:'2px' }}>
-                    <span style={{ fontSize:'9px', fontWeight:700, padding:'1px 6px', borderRadius:'4px', background:c.status==='ready'?C.grn50:c.status==='published'?C.brand50:C.slate100, color:c.status==='ready'?C.green:c.status==='published'?C.brand:C.slate500 }}>
-                      {c.status==='ready'?'✓ Siap':c.status==='published'?'↑ Published':c.status==='scheduled'?'⏰ Terjadwal':c.status}
-                    </span>
-                    {c.primary_platform&&<span style={{ fontSize:'9px', color:C.slate400 }}>{PLATFORM_EMOJI[c.primary_platform]||'📱'} {c.primary_platform}</span>}
-                    <span style={{ fontSize:'9px', color:C.slate300, marginLeft:'auto' }}>{new Date(c.created_at).toLocaleDateString('id-ID',{day:'numeric',month:'short'})}</span>
+        </div>
+
+        {activeTab === 'ai' && (
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8 }} className="actions-grid">
+            {QUICK_ACTIONS_AI.map((a, i) => (
+              <Link key={i} href={a.href} style={{ textDecoration:'none' }}>
+                <div style={{ padding:'11px 12px', borderRadius:11, background:a.bg, border:`1px solid ${a.color}18`, display:'flex', gap:8, alignItems:'flex-start', transition:'all .18s', cursor:'pointer' }}
+                  onMouseEnter={e=>{ (e.currentTarget as HTMLElement).style.transform='translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow=`0 6px 18px ${a.color}20` }}
+                  onMouseLeave={e=>{ (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}>
+                  <span style={{ fontSize:19, flexShrink:0 }}>{a.icon}</span>
+                  <div style={{ minWidth:0 }}>
+                    <div style={{ fontSize:11, fontWeight:700, color:a.color, marginBottom:2, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{a.label}</div>
+                    <div style={{ fontSize:10, color:C.inkMuted, lineHeight:1.4 }}>{a.desc}</div>
                   </div>
                 </div>
-                {c.type!=='image'&&(
-                  <button onClick={()=>copyText(c.title,c.id)} style={{ width:'28px', height:'28px', borderRadius:'7px', border:`1px solid ${C.slate200}`, background:C.white, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                    {copied===c.id?<Check size={12} color={C.green}/>:<Copy size={12} color={C.slate400}/>}
-                  </button>
-                )}
-              </div>
+              </Link>
             ))}
           </div>
         )}
-      </div>
 
-      {/* ── SHORTCUTS ────────────────────────────────────────── */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(min(100%,190px),1fr))', gap:'8px', marginBottom:'24px' }}>
-        {[
-          { href:'/library',             icon:<Archive size={14} color={C.slate500}/>,    label:'Asset Library',     desc:'Semua konten',      bg:C.slate100 },
-          { href:'/settings/brand-kit',  icon:<Palette size={14} color={C.amber}/>,       label:'Brand Kit',         desc:'Tone, warna, gaya', bg:C.amb50 },
-          { href:'/settings/connections',icon:<Settings size={14} color={C.green}/>,      label:'Koneksi Platform',  desc:'Instagram, TikTok', bg:C.grn50 },
-          { href:'/billing',             icon:<CreditCard size={14} color={C.purple}/>,   label:'Billing & Credits', desc:'Plan & penggunaan',  bg:C.pur50 },
-          { href:'/settings',            icon:<Settings size={14} color={C.slate500}/>,   label:'Pengaturan',        desc:'Profil & AI Memory',bg:C.slate100 },
-        ].map(item=>(
-          <Link key={item.href} href={item.href} style={{ textDecoration:'none' }}>
-            <div style={{ padding:'11px 13px', borderRadius:'11px', background:C.white, border:`1px solid ${C.slate200}`, display:'flex', alignItems:'center', gap:'9px', transition:'all .12s', cursor:'pointer' }}
-              onMouseEnter={e=>(e.currentTarget as HTMLElement).style.borderColor=C.slate300}
-              onMouseLeave={e=>(e.currentTarget as HTMLElement).style.borderColor=C.slate200}
-            >
-              <div style={{ width:'30px', height:'30px', borderRadius:'8px', background:item.bg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>{item.icon}</div>
-              <div style={{ minWidth:0 }}>
-                <div style={{ fontSize:'12px', fontWeight:700, color:C.slate900 }}>{item.label}</div>
-                <div style={{ fontSize:'10px', color:C.slate400 }}>{item.desc}</div>
+        {activeTab === 'ads' && (
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(6,1fr)', gap:8 }} className="ads-actions-grid">
+            {QUICK_ACTIONS_ADS.map((a, i) => (
+              <Link key={i} href={a.href} style={{ textDecoration:'none' }}>
+                <div style={{ padding:12, borderRadius:11, background:a.bg, border:`1px solid ${a.color}20`, transition:'all .18s', cursor:'pointer' }}
+                  onMouseEnter={e=>{ (e.currentTarget as HTMLElement).style.transform='translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow=`0 6px 18px ${a.color}20` }}
+                  onMouseLeave={e=>{ (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='' }}>
+                  <div style={{ fontSize:22, marginBottom:7 }}>{a.icon}</div>
+                  <div style={{ fontSize:11, fontWeight:700, color:a.color, marginBottom:2 }}>{a.label}</div>
+                  <div style={{ fontSize:10, color:C.inkMuted, lineHeight:1.4 }}>{a.desc}</div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      {/* ── CHART + QUOTA ─────────────────────────────────── */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 300px', gap:16, marginBottom:18 }} className="main-grid">
+
+        {/* Chart */}
+        <Card>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
+            <div>
+              <div style={{ fontSize:14, fontWeight:700, color:C.ink }}>📊 Aktivitas 7 Hari</div>
+              <div style={{ fontSize:11, color:C.inkMuted, marginTop:1 }}>
+                {chartTotal === 0 ? 'Belum ada konten dalam 7 hari terakhir' : `${chartTotal} konten di-generate`}
               </div>
             </div>
-          </Link>
-        ))}
+            <div style={{ display:'flex', gap:4 }}>
+              {(['area','bar'] as const).map(t => (
+                <button key={t} type="button" onClick={()=>setChartType(t)}
+                  style={{ padding:'4px 10px', borderRadius:6, border:`1px solid ${chartType===t?C.amber:C.border}`, background:chartType===t?C.amberXlt:C.surface, fontSize:11, fontWeight:chartType===t?700:500, color:chartType===t?C.amberDk:C.inkMuted, cursor:'pointer', fontFamily:'inherit' }}>
+                  {t === 'area' ? 'Area' : 'Bar'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {loading ? (
+            <div style={{ height:200 }}><Sk w="100%" h="200px" r="8px"/></div>
+          ) : (
+            <ResponsiveContainer width="100%" height={200}>
+              {chartType === 'area' ? (
+                <AreaChart data={chartD} margin={{ top:4, right:4, bottom:0, left:-20 }}>
+                  <defs>
+                    {[['G',C.amber],['T',C.blue],['V',C.purple]].map(([k,c]) => (
+                      <linearGradient key={k} id={`c${k}`} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={c as string} stopOpacity={0.18}/>
+                        <stop offset="95%" stopColor={c as string} stopOpacity={0}/>
+                      </linearGradient>
+                    ))}
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false}/>
+                  <XAxis dataKey="day" tick={{ fontSize:11, fill:C.inkMuted }} axisLine={false} tickLine={false}/>
+                  <YAxis tick={{ fontSize:10, fill:C.inkMuted }} axisLine={false} tickLine={false} allowDecimals={false}/>
+                  <Tooltip content={<ChartTip/>}/>
+                  <Area type="monotone" dataKey="gambar" name="Gambar" stroke={C.amber}  fill="url(#cG)" strokeWidth={2} dot={false}/>
+                  <Area type="monotone" dataKey="teks"   name="Teks"   stroke={C.blue}   fill="url(#cT)" strokeWidth={2} dot={false}/>
+                  <Area type="monotone" dataKey="video"  name="Video"  stroke={C.purple} fill="url(#cV)" strokeWidth={2} dot={false}/>
+                </AreaChart>
+              ) : (
+                <BarChart data={chartD} margin={{ top:4, right:4, bottom:0, left:-20 }} barSize={10}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false}/>
+                  <XAxis dataKey="day" tick={{ fontSize:11, fill:C.inkMuted }} axisLine={false} tickLine={false}/>
+                  <YAxis tick={{ fontSize:10, fill:C.inkMuted }} axisLine={false} tickLine={false} allowDecimals={false}/>
+                  <Tooltip content={<ChartTip/>}/>
+                  <Bar dataKey="gambar" name="Gambar" fill={C.amber}  radius={[4,4,0,0]}/>
+                  <Bar dataKey="teks"   name="Teks"   fill={C.blue}   radius={[4,4,0,0]}/>
+                  <Bar dataKey="video"  name="Video"  fill={C.purple} radius={[4,4,0,0]}/>
+                </BarChart>
+              )}
+            </ResponsiveContainer>
+          )}
+
+          <div style={{ display:'flex', gap:14, justifyContent:'center', marginTop:8 }}>
+            {[['Gambar',C.amber],['Teks',C.blue],['Video',C.purple]].map(([l,c]) => (
+              <div key={l} style={{ display:'flex', alignItems:'center', gap:4, fontSize:11, color:C.inkMuted }}>
+                <div style={{ width:7, height:7, borderRadius:'50%', background:c as string }}/>
+                {l}
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* Quota & Add-on */}
+        <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+          <Card>
+            <div style={{ fontSize:13, fontWeight:700, color:C.ink, marginBottom:12, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+              <span style={{ display:'flex', gap:5, alignItems:'center' }}><Crown size={13} color={C.amber}/> Kuota Bulan Ini</span>
+              <Link href="/billing" style={{ fontSize:10, color:C.amber, fontWeight:700, textDecoration:'none' }}>Kelola</Link>
+            </div>
+
+            {isSuperuser ? (
+              <div style={{ padding:'18px 12px', borderRadius:10, background:`linear-gradient(135deg,${C.amber}15,${C.amberLt})`, border:`1px solid ${C.amber}30`, textAlign:'center' }}>
+                <InfinityIcon size={28} color={C.amberDk} style={{ marginBottom:6 }}/>
+                <div style={{ fontSize:13, fontWeight:800, color:C.amberDk }}>Unlimited Access</div>
+                <div style={{ fontSize:10, color:C.inkMuted, marginTop:2 }}>Mode Superuser — tanpa batas</div>
+              </div>
+            ) : credit.quota > 0 ? (
+              <>
+                <QuotaRing
+                  pct={creditPct}
+                  label="Kredit terpakai"
+                  sub={`${credit.used}/${credit.quota} kredit · sisa ${credit.balance}`}
+                  color={lowCredit ? C.red : C.amber}
+                />
+                {lowCredit && (
+                  <div style={{ marginTop:10, padding:'8px 10px', borderRadius:9, background:C.amberXlt, border:`1px solid ${C.amber}30`, display:'flex', gap:6, alignItems:'flex-start', fontSize:11, color:C.amberDk }}>
+                    <AlertTriangle size={12} style={{ flexShrink:0, marginTop:1 }}/> Kredit hampir habis!
+                  </div>
+                )}
+              </>
+            ) : (
+              <div style={{ padding:14, borderRadius:10, background:C.bg, border:`1px dashed ${C.border}`, textAlign:'center' }}>
+                <div style={{ fontSize:11, color:C.inkMuted, lineHeight:1.5 }}>Belum ada kuota aktif</div>
+              </div>
+            )}
+
+            {!isSuperuser && (
+              <Link href="/billing" style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:5, marginTop:10, padding:8, borderRadius:9, background:`linear-gradient(135deg,${C.amber},${C.amberDk})`, color:'#fff', fontSize:12, fontWeight:700, textDecoration:'none', boxShadow:C.sa }}>
+                <CreditCard size={12}/> Topup / Upgrade
+              </Link>
+            )}
+          </Card>
+
+          {/* Add-on katalog (harga statis dari pricing config — bukan data user) */}
+          {!isSuperuser && (
+            <Card style={{ padding:'14px 16px' }}>
+              <div style={{ fontSize:12, fontWeight:700, color:C.ink, marginBottom:9 }}>⚡ Add-On Cepat</div>
+              {[
+                { label:'Topup 50 kredit',   price:'Rp49K',  color:C.amber  },
+                { label:'Video Pack 5×',     price:'Rp89K',  color:C.purple },
+                { label:'Topup 200 kredit',  price:'Rp149K', color:C.green  },
+              ].map((item, i) => (
+                <Link key={i} href="/billing" style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 10px', borderRadius:9, border:`1px solid ${C.border}`, background:C.bg, textDecoration:'none', marginBottom:i<2?6:0 }}
+                  onMouseEnter={e=>{ (e.currentTarget as HTMLElement).style.borderColor=C.amber; (e.currentTarget as HTMLElement).style.background=C.amberXlt }}
+                  onMouseLeave={e=>{ (e.currentTarget as HTMLElement).style.borderColor=C.border; (e.currentTarget as HTMLElement).style.background=C.bg }}>
+                  <span style={{ fontSize:11, color:C.inkSub, fontWeight:500 }}>{item.label}</span>
+                  <span style={{ fontSize:12, fontWeight:800, color:item.color }}>{item.price}</span>
+                </Link>
+              ))}
+            </Card>
+          )}
+        </div>
       </div>
 
+      {/* ── RECENT + UPCOMING ─────────────────────────────── */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 340px', gap:16, marginBottom:18 }} className="bottom-grid">
+
+        {/* Recent assets — nyata, dengan empty state */}
+        <Card>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
+            <div style={{ fontSize:14, fontWeight:700, color:C.ink }}>🕐 Aktivitas Terbaru</div>
+            {recent.length > 0 && (
+              <Link href="/library" style={{ display:'flex', alignItems:'center', gap:4, fontSize:12, color:C.amber, textDecoration:'none', fontWeight:600 }}>
+                Lihat semua <ArrowRight size={12}/>
+              </Link>
+            )}
+          </div>
+          <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+            {loading ? (
+              Array.from({length:5}).map((_,i) => (
+                <div key={i} style={{ display:'flex', gap:10, alignItems:'center', padding:'9px 10px', borderRadius:9, background:C.bg }}>
+                  <Sk w="38px" h="38px" r="9px"/>
+                  <div style={{ flex:1 }}><Sk w="65%" h="12px" r="4px"/><div style={{ marginTop:5 }}><Sk w="40%" h="10px" r="4px"/></div></div>
+                </div>
+              ))
+            ) : recent.length === 0 ? (
+              <EmptyState
+                icon="📭"
+                title="Belum ada konten"
+                desc="Mulai buat gambar, video, atau caption pertamamu dari Studio. Aktivitasmu akan muncul di sini."
+                cta={{ label:'Buka Studio', href:'/studio' }}
+              />
+            ) : (
+              recent.map((item: any) => {
+                const meta = BUCKET_META[item.bucket] ?? BUCKET_META.other
+                return (
+                  <div key={item.id} style={{ display:'flex', gap:10, alignItems:'center', padding:'10px 11px', borderRadius:10, border:`1px solid ${C.border}`, background:C.surface, transition:'all .15s' }}
+                    onMouseEnter={e=>{ (e.currentTarget as HTMLElement).style.background=C.bg; (e.currentTarget as HTMLElement).style.borderColor=C.amber }}
+                    onMouseLeave={e=>{ (e.currentTarget as HTMLElement).style.background=C.surface; (e.currentTarget as HTMLElement).style.borderColor=C.border }}>
+                    <div style={{ width:38, height:38, borderRadius:9, background:meta.bg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, flexShrink:0 }}>{meta.icon}</div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:12, fontWeight:600, color:C.ink, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item.title}</div>
+                      <div style={{ display:'flex', gap:6, alignItems:'center', marginTop:3 }}>
+                        <span style={{ fontSize:9, fontWeight:700, padding:'1px 5px', borderRadius:4, background:`${meta.color}18`, color:meta.color }}>{item.tool}</span>
+                        <span style={{ fontSize:10, color:C.inkDim }}>{item.created}</span>
+                      </div>
+                    </div>
+                    {item.file_url && (
+                      <a href={item.file_url} target="_blank" rel="noreferrer" download
+                        style={{ padding:5, borderRadius:7, color:C.inkDim, textDecoration:'none', flexShrink:0 }}
+                        onMouseEnter={e=>(e.currentTarget as HTMLElement).style.color=C.amber}
+                        onMouseLeave={e=>(e.currentTarget as HTMLElement).style.color=C.inkDim}>
+                        <Download size={13}/>
+                      </a>
+                    )}
+                  </div>
+                )
+              })
+            )}
+          </div>
+        </Card>
+
+        {/* Upcoming scheduled — nyata, dengan empty state */}
+        <Card style={{ padding:'14px 16px' }}>
+          <div style={{ fontSize:12, fontWeight:700, color:C.ink, marginBottom:9, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            <span>📅 Posting Besok</span>
+            {upcoming.length > 0 && (
+              <Link href="/scheduler" style={{ fontSize:10, color:C.sky, fontWeight:700, textDecoration:'none' }}>Lihat semua →</Link>
+            )}
+          </div>
+          {loading ? (
+            <Sk h="80px" r="8px"/>
+          ) : upcoming.length === 0 ? (
+            <div style={{ padding:'14px 8px', textAlign:'center', fontSize:11, color:C.inkMuted, lineHeight:1.5 }}>
+              Belum ada posting terjadwal untuk besok. <Link href="/scheduler" style={{ color:C.sky, fontWeight:700, textDecoration:'none' }}>Jadwalkan →</Link>
+            </div>
+          ) : (
+            upcoming.map((p: any, i: number) => (
+              <div key={i} style={{ display:'flex', gap:8, alignItems:'center', padding:'6px 0', borderBottom:i<upcoming.length-1?`1px solid ${C.border}`:'none' }}>
+                <span style={{ fontSize:10, fontWeight:800, color:C.sky, width:42, flexShrink:0 }}>{p.time}</span>
+                <span style={{ fontSize:11, color:C.inkMuted, flexShrink:0, textTransform:'capitalize' }}>{p.platform}</span>
+                <span style={{ fontSize:11, color:C.inkSub, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.title}</span>
+              </div>
+            ))
+          )}
+        </Card>
+      </div>
+
+      {/* ── UPGRADE BANNER — hidden untuk superuser ──────── */}
+      {!isSuperuser && (
+        <div style={{ borderRadius:16, background:`linear-gradient(135deg,${C.amber} 0%,${C.amberDk} 60%,#B45309 100%)`, padding:'18px 24px', display:'flex', alignItems:'center', gap:16, flexWrap:'wrap', boxShadow:C.sa }}>
+          <div style={{ flex:1, minWidth:200 }}>
+            <div style={{ fontSize:15, fontWeight:800, color:'#fff', marginBottom:3 }}>
+              🚀 Upgrade ke paket lebih tinggi
+            </div>
+            <div style={{ fontSize:12, color:'rgba(255,255,255,.85)', lineHeight:1.6 }}>
+              Buka lebih banyak kredit, video AI, dan fitur premium. Lihat paket yang cocok untuk skala bisnismu.
+            </div>
+          </div>
+          <Link href="/billing" style={{ padding:'9px 20px', borderRadius:10, background:'#fff', color:C.amberDk, fontSize:13, fontWeight:800, textDecoration:'none', flexShrink:0, whiteSpace:'nowrap', boxShadow:'0 2px 8px rgba(0,0,0,.15)' }}>
+            Lihat Paket →
+          </Link>
+        </div>
+      )}
+
       <style>{`
-        @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
-        @keyframes spin    { to{transform:rotate(360deg)} }
-        @keyframes popupIn { from{opacity:0;transform:translate(-50%,-48%) scale(.96)} to{opacity:1;transform:translate(-50%,-50%) scale(1)} }
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&display=swap');
         * { box-sizing:border-box }
-        @media (max-width:767px) {
-          div[style*="grid-template-columns:minmax(0,1fr) minmax(0,220px)"] { grid-template-columns:1fr!important }
+        @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+        .kpi-strip        { grid-template-columns:repeat(4,1fr) !important }
+        .actions-grid     { grid-template-columns:repeat(4,1fr) !important }
+        .ads-actions-grid { grid-template-columns:repeat(6,1fr) !important }
+        .main-grid        { grid-template-columns:1fr 300px !important }
+        .bottom-grid      { grid-template-columns:1fr 340px !important }
+
+        @media (max-width:1100px) {
+          .kpi-strip        { grid-template-columns:repeat(2,1fr) !important }
+          .ads-actions-grid { grid-template-columns:repeat(3,1fr) !important }
+          .main-grid        { grid-template-columns:1fr !important }
+          .bottom-grid      { grid-template-columns:1fr !important }
+        }
+        @media (max-width:640px) {
+          .actions-grid     { grid-template-columns:repeat(2,1fr) !important }
+          .ads-actions-grid { grid-template-columns:repeat(2,1fr) !important }
         }
       `}</style>
     </div>

@@ -4,7 +4,7 @@
 import { use } from 'react'
 import Link    from 'next/link'
 import { ArrowLeft, RefreshCw } from 'lucide-react'
-import { JobType, useJobStatus }   from '@/lib/hooks/useJobStatus'
+import { JobType, useJobStatus }   from '@/hooks/useJobStatus'
 import { SkeletonLoader } from '@/components/jobs/SkeletonLoader'
 import { ProgressBar }    from '@/components/jobs/ProgressBar'
 import { ResultPreview }  from '@/components/jobs/ResultPreview'

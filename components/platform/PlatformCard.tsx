@@ -9,8 +9,8 @@ import {
   type SupportedPlatform, type ConnectionStatus,
 } from '@/lib/platform/platform-config'
 import { ConnectionStatusBadge } from './StatusBadge'
-import { useDisconnectPlatform } from '@/lib/hooks/usePlatformConnections'
-import type { PlatformConnectionRecord } from '@/lib/hooks/usePlatformConnections'
+import { useDisconnectPlatform } from '@/hooks/usePlatformConnections'
+import type { PlatformConnectionRecord } from '@/hooks/usePlatformConnections'
 
 interface Props {
   platform:   SupportedPlatform

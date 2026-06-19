@@ -10,7 +10,7 @@ import { OAuthError }               from './instagram'
 
 export interface RefreshResult {
   tenant_id:  string
-  platform:  string
+  platform: string | null
   status:    'refreshed' | 'skipped' | 'failed' | 'no_token'
   error?:    string
 }
@@ -39,33 +39,46 @@ export async function refreshConnectionToken(
     return { tenant_id: conn.tenant_id, platform: conn.platform, status: 'skipped' }
   }
 
-  if (!conn.accessToken) {
+  if (!conn.access_token) {
     return { tenant_id: conn.tenant_id, platform: conn.platform, status: 'no_token' }
   }
-
+  if (!conn.platform) {
+    return {
+      tenant_id: conn.tenant_id,
+      platform: null,
+      status: 'failed',
+      error: 'Missing platform',
+    }
+  }
   try {
     const adapter = getPlatformAdapter(conn.platform)
 
     // Decrypt current tokens
-    const currentAccessToken  = decryptToken(conn.accessToken)
-    const currentrefresh_token: = conn.refresh_token: ? decryptToken(conn.refresh_token:) : ''
+    const currentAccessToken  = decryptToken(conn.access_token)
+    const currentRefreshToken =
+      conn.refresh_token
+        ? decryptToken(conn.refresh_token)
+        : ''
 
     // Call adapter refresh
     const newTokens = await adapter.refreshAccessToken({
-      access_token:  currentAccessToken,
-      refresh_token: currentrefresh_token:,
+      accessToken: currentAccessToken,
+      refresh_token: currentRefreshToken,
     })
 
     // Encrypt new tokens
-    const encAccessToken  = encryptToken(newTokens.accessToken)
-    const encrefresh_token: = newTokens.refresh_token: ? encryptToken(newTokens.refresh_token:) : conn.refresh_token:
+    const encAccessToken  = encryptToken(newTokens.access_token)
+    const encRefreshToken =
+      newTokens.refresh_token
+        ? encryptToken(newTokens.refresh_token)
+        : conn.refresh_token
 
     // Update DB
     await db.platformConnection.update({
       where: { id: connectionId },
       data: {
         access_token:    encAccessToken,
-        refresh_token:   encrefresh_token:,
+        refresh_token: encRefreshToken,
         token_expires_at: newTokens.expiresAt ?? null,
         status:         'connected',
         last_verified_at: new Date(),
@@ -114,7 +127,7 @@ export async function refreshExpiringSoonTokens(options: {
     where: {
       deleted_at:  null,
       status:     { in: ['connected', 'expired'] },
-      access_token: { not: null },
+      access_token: { not: null, },
       OR: [
         // Expires within threshold days
         { token_expires_at: { lte: cutoffDate } },

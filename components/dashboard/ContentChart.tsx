@@ -6,7 +6,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend, Cell,
 } from 'recharts'
-import type { ChartDay } from '@/lib/hooks/useDashboard'
+import type { ChartDay } from '@/hooks/useDashboard'
 
 interface Props {
   data:    ChartDay[]
@@ -14,7 +14,16 @@ interface Props {
 }
 
 type Period = '7d' | '30d'
-
+// ── Route map terpusat (ubah di sini kalau ada yang 404) ──────
+const ROUTES = {
+  studio:       '/dashboard/studio',
+  tiktokScript: '/dashboard/studio/video/tiktok',
+  ugcVideo:     '/dashboard/studio/video/ugc',
+  enhancer:     '/dashboard/studio/image/enhancer',
+  billing:      '/billing',           // cek: mungkin /dashboard/billing
+  scheduler:    '/dashboard/scheduler',
+  campaign:     '/dashboard/campaign-builder',
+}
 export function ContentChart({ data, loading }: Props) {
   const [period, setPeriod] = useState<Period>('7d')
 
