@@ -9,6 +9,5 @@ export const TOOL_FEATURE_MAP = {
   '/studio/image/model-swap':       'model-swap',          // verifikasi
   '/studio/image/virtual-tryon':    'ai-tryon',            // verifikasi
   '/studio/image/product-to-model': 'product-to-model',    // verifikasi
-  '/content/image':                 'ai-image-generator',  // sudah pasti (HERO_IDS)
   '/content/new':                   'ai-image-generator',  // verifikasi (atau id sendiri)
 } as const

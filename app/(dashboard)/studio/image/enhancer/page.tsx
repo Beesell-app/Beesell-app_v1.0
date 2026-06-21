@@ -301,12 +301,11 @@ export default function ProductEnhancerPage() {
           <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
 
             {/* Upload zone */}
-            <div style={{ background:C.surface, borderRadius:'14px', border:`1px solid ${C.border}`, boxShadow:C.sh, overflow:'hidden' }}>
-              <div style={{ padding:'13px 16px', borderBottom:`1px solid ${C.border}`, display:'flex', alignItems:'center', gap:'7px' }}>
-                <Package size={14} color={C.amberDk}/>
-                <span style={{ fontSize:'12px', fontWeight:700, color:C.ink }}>Foto Produk</span>
-                <span style={{ fontSize:'9px', color:C.amber, fontWeight:700, padding:'2px 6px', borderRadius:'4px', background:C.amberLt }}>WAJIB</span>
-              </div>
+            <div style={{ background:C.surface, borderRadius:'16px', padding:'20px', border:`1px solid ${C.border}`, boxShadow:C.sh }}>
+              <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'16px' }}>
+              <div style={{ background:C.amberLt, padding:'8px', borderRadius:'8px' }}><Package size={16} color={C.amberDk}/></div>
+              <span style={{ fontSize:'14px', fontWeight:800, color:C.ink }}>1. Upload Produk</span>
+            </div>
               <div style={{ padding:'14px 16px' }}>
                 {imagePreview ? (
                   <div style={{ position:'relative', borderRadius:'10px', overflow:'hidden', border:`1px solid ${C.border}` }}>
@@ -343,11 +342,10 @@ export default function ProductEnhancerPage() {
 
             {/* Preset picker */}
             <div style={{ background:C.surface, borderRadius:'14px', border:`1px solid ${C.border}`, boxShadow:C.sh, overflow:'hidden' }}>
-              <div style={{ padding:'13px 16px', borderBottom:`1px solid ${C.border}`, display:'flex', alignItems:'center', gap:'7px' }}>
-                <Sparkles size={14} color={C.amberDk}/>
-                <span style={{ fontSize:'12px', fontWeight:700, color:C.ink }}>Style Preset</span>
-                <span style={{ fontSize:'10px', color:C.inkMuted, marginLeft:'auto' }}>20 preset tersedia</span>
-              </div>
+              <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'16px' }}>
+                <div style={{ background:C.purpleLt, padding:'8px', borderRadius:'8px' }}><Sparkles size={16} color={C.purple}/></div>
+                <span style={{ fontSize:'14px', fontWeight:800, color:C.ink }}>2. Pilih Gaya Iklan</span>
+            </div>
               <div style={{ padding:'12px 14px' }}>
                 {/* Category tabs */}
                 <div style={{ display:'flex', gap:'4px', marginBottom:'12px', flexWrap:'wrap' }}>
@@ -473,24 +471,18 @@ export default function ProductEnhancerPage() {
           </div>
 
           {/* ════ RIGHT — Results ════ */}
-          <div>
-            {/* Header */}
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'14px', flexWrap:'wrap', gap:'8px' }}>
+          <div style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
+            {/* Header Hasil */}
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
               <div>
-                <div style={{ fontSize:'15px', fontWeight:700, color:C.ink }}>Hasil Enhancement</div>
-                <div style={{ fontSize:'11px', color:C.inkMuted, marginTop:'2px' }}>
-                  {result ? `${preset?.label} · ${elapsed}s · ${QUALITIES[quality].label}` : 'Upload foto dan pilih preset untuk mulai'}
-                </div>
+                <h2 style={{ fontSize:'18px', fontWeight:800, color:C.ink, margin:0 }}>Hasil Enhancement</h2>
+                <p style={{ fontSize:'12px', color:C.inkMuted, marginTop:'4px' }}>AI telah menyulap foto produkmu menjadi aset profesional</p>
               </div>
+              {/* Tombol Aksi di kanan atas */}
               {result && (
-                <div style={{ display:'flex', gap:'7px' }}>
-                  <button type="button" onClick={()=>setShowBA(p=>!p)}
-                    style={{ display:'flex', alignItems:'center', gap:'5px', padding:'7px 12px', borderRadius:'8px', border:`1px solid ${showBA?C.amber:C.border}`, background:showBA?C.amberXlt:C.surface, color:showBA?C.amberDk:C.inkMuted, fontSize:'12px', fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
-                    <ZoomIn size={13}/> {showBA?'Tutup':'Before/After'}
-                  </button>
-                  <button type="button" onClick={generate} disabled={!canGen}
-                    style={{ display:'flex', alignItems:'center', gap:'5px', padding:'7px 12px', borderRadius:'8px', border:`1px solid ${C.border}`, background:C.surface, color:C.inkMuted, fontSize:'12px', fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
-                    <RefreshCw size={13}/> Ulang
+                <div style={{ display:'flex', gap:'8px' }}>
+                  <button onClick={download} style={{ display:'flex', alignItems:'center', gap:'6px', padding:'8px 16px', borderRadius:'10px', background:C.green, color:'#fff', fontWeight:700, fontSize:'12px', border:'none', cursor:'pointer' }}>
+                    <Download size={14}/> Download
                   </button>
                 </div>
               )}
@@ -558,23 +550,27 @@ export default function ProductEnhancerPage() {
                 </div>
               </div>
             )}
-
+          
             {/* Result */}
-            {result && !generating && (
-              <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
-                {/* Main image / BA slider */}
-                <div style={{ borderRadius:'14px', overflow:'hidden', border:`1px solid ${C.border}`, boxShadow:C.sh }}>
-                  {showBA && imagePreview ? (
-                    <BASlider before={imagePreview} after={result}/>
-                  ) : (
-                    <div style={{ position:'relative', background:C.bg }}>
-                      <img src={result} alt="Enhanced" style={{ width:'100%', display:'block', maxHeight:'540px', objectFit:'contain' }}/>
-                      <div style={{ position:'absolute', top:'12px', left:'12px', padding:'4px 10px', borderRadius:'7px', background:'rgba(0,0,0,.6)', fontSize:'11px', fontWeight:700, color:'#fff', backdropFilter:'blur(4px)' }}>
-                        ✨ {preset?.label}
-                      </div>
+            <div style={{ borderRadius:'20px', overflow:'hidden', border:`1px solid ${C.border}`, boxShadow: '0 10px 25px rgba(0,0,0,0.05)', background:C.surface }}>
+              {/* Preview Content */}
+              {result && !generating ? (
+                <div style={{ position:'relative' }}>
+                    {showBA ? <BASlider before={imagePreview!} after={result}/> : <img src={result} style={{ width:'100%' }} />}
+                    {/* Label status di atas gambar */}
+                    <div style={{ position:'absolute', top:'16px', left:'16px', padding:'6px 12px', borderRadius:'20px', background:'rgba(255,255,255,0.9)', backdropFilter:'blur(4px)', fontSize:'11px', fontWeight:700, color:C.amberDk }}>
+                      Preset: {preset?.label}
                     </div>
-                  )}
                 </div>
+              ) : (
+                /* Empty state dengan ilustrasi yang bersih */
+                <div style={{ padding:'80px 20px', textAlign:'center', display:'flex', flexDirection:'column', alignItems:'center' }}>
+                    <div style={{ fontSize:'48px', marginBottom:'16px' }}>✨</div>
+                    <h3 style={{ margin:'0 0 8px', color:C.ink }}>Belum ada hasil</h3>
+                    <p style={{ color:C.inkMuted, fontSize:'13px', maxWidth:'300px' }}>Upload foto produk dan pilih preset untuk mulai melihat keajaiban AI kami.</p>
+                </div>
+              )}
+            
 
                 {/* Action row */}
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'7px' }}>
@@ -647,7 +643,6 @@ export default function ProductEnhancerPage() {
                   </div>
                 </div>
               </div>
-            )}
           </div>
         </div>
 

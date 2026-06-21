@@ -1,6 +1,6 @@
 'use client'
 // apps/web-app/app/(dashboard)/studio/image/page.tsx
-// ── BeeSell AI — AI Image Generator Pro ──────────────────────
+// ── BeeSell AI — AI Visual Marketing Engine ──────────────────────
 // Full 12-dimension form → AI builds prompt → multi-image output
 // Modes: Quick (3 fields) | Advanced (12 fields)
 
@@ -400,7 +400,7 @@ export default function AIImageGeneratorPage() {
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:'10px' }}>
           <div>
             <h1 style={{ fontFamily:"'Fraunces',Georgia,serif", fontSize:'clamp(20px,3.5vw,26px)', fontWeight:600, color:C.slate900, letterSpacing:'-0.02em', marginBottom:'3px' }}>
-              AI Image Generator Pro 📸
+              AI Visual Marketing Engine 📸
             </h1>
             <p style={{ fontSize:'13px', color:C.slate500 }}>
               Hyper-realistic product photography — studio quality dalam 30 detik
@@ -607,7 +607,7 @@ export default function AIImageGeneratorPage() {
               <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:'400px', borderRadius:'20px', border:`2px dashed ${C.slate200}`, background:C.slate50 }}>
                 <div style={{ fontSize:'60px', opacity:.3, marginBottom:'16px' }}>📸</div>
                 <div style={{ fontSize:'16px', fontWeight:700, color:C.slate700, marginBottom:'6px' }}>
-                  AI Image Generator Pro
+                 AI Visual Marketing Engine
                 </div>
                 <div style={{ fontSize:'13px', color:C.slate400, textAlign:'center', maxWidth:'280px', lineHeight:1.6, marginBottom:'20px' }}>
                   Isi nama produk, pilih mode Quick atau Advanced, klik Generate

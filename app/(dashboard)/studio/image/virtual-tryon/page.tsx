@@ -51,14 +51,14 @@ const PROMPT_PRESETS = [
 
 // ── Starter Models (lokal Indonesia focus) ────────────────────
 const STARTER_MODELS = [
-  { id:'wanita-muda',   label:'Wanita Muda',    icon:'👩', desc:'Indo, 22-28th, slim',    category:'women', age:'adult' },
-  { id:'wanita-hijab',  label:'Hijab Wanita',   icon:'🧕', desc:'Indo, berhijab, 24-32th', category:'women', age:'adult' },
-  { id:'pria-muda',     label:'Pria Muda',      icon:'👨', desc:'Indo, 22-28th, atletis',  category:'men',   age:'adult' },
-  { id:'remaja-wanita', label:'Remaja Wanita',  icon:'👧', desc:'Asia, 14-16th',            category:'women', age:'teen' },
-  { id:'remaja-pria',   label:'Remaja Pria',    icon:'👦', desc:'Asia, 14-16th',            category:'men',   age:'teen' },
-  { id:'anak-perempuan',label:'Anak Perempuan', icon:'🧒', desc:'Indo, 6-10th',             category:'women', age:'kid' },
-  { id:'anak-laki',     label:'Anak Laki-laki', icon:'🧒', desc:'Indo, 6-10th',             category:'men',   age:'kid' },
-  { id:'balita',        label:'Balita',         icon:'👶', desc:'2-4 tahun',                category:'women', age:'toddler' },
+  { id:'wanita-muda',   label:'Wanita Muda',   image:'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80', desc:'Indo, 22-28th', category:'women', age:'adult' },
+  { id:'wanita-hijab',  label:'Hijab Wanita',  image:'https://images.unsplash.com/photo-1589156191108-c762ff4b96ab?auto=format&fit=crop&w=400&q=80', desc:'Indo, berhijab', category:'women', age:'adult' },
+  { id:'pria-muda',     label:'Pria Muda',     image:'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=400&q=80', desc:'Indo, atletis', category:'men',   age:'adult' },
+  { id:'remaja-wanita', label:'Remaja Wanita', image:'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=400&q=80', desc:'Asia, 14-16th', category:'women', age:'teen' },
+  { id:'pria-dewasa',   label:'Pria Dewasa',   image:'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80', desc:'Asia, 30-40th', category:'men',   age:'adult' },
+  { id:'anak-perempuan',label:'Anak Perempuan',image:'https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&w=400&q=80', desc:'Indo, 6-10th',  category:'women', age:'kid' },
+  { id:'anak-laki',     label:'Anak Laki-laki',image:'https://images.unsplash.com/photo-1488161628813-04466f872be2?auto=format&fit=crop&w=400&q=80', desc:'Indo, 6-10th',  category:'men',   age:'kid' },
+  { id:'balita',        label:'Balita',        image:'https://images.unsplash.com/photo-1519241047957-be31d7379a5d?auto=format&fit=crop&w=400&q=80', desc:'2-4 tahun',   category:'women', age:'toddler' },
 ]
 
 // ── Upload zone component ─────────────────────────────────────
@@ -295,7 +295,21 @@ export default function TryOnPage() {
     if (f.size > 15*1024*1024) { setError('Pakaian: maks 15MB'); return }
     setGarmentFile(f); setGarmentPrev(URL.createObjectURL(f)); setError(''); setResult(null)
   }, [])
-
+  const handleStarterSelect = async (imageUrl: string) => {
+    setModelPreview(imageUrl);
+    setShowStarters(false);
+    setError('');
+    
+    // Ubah URL gambar menjadi File object agar cocok dengan format FormData API kamu
+    try {
+      const res = await fetch(imageUrl);
+      const blob = await res.blob();
+      const file = new File([blob], `beesell-starter-${Date.now()}.jpg`, { type: blob.type });
+      setModelFile(file);
+    } catch (err) {
+      console.error("Gagal memuat gambar starter", err);
+    }
+  };
   const generate = async () => {
     if (!modelFile)   { setError('Upload foto model dulu'); return }
     if (!garmentFile) { setError('Upload foto pakaian dulu'); return }
@@ -349,7 +363,7 @@ export default function TryOnPage() {
             <ArrowLeft size={13}/>
             <span>AI Studio</span>
             <ChevronRight size={11}/>
-            <span>AI Image Generator</span>
+            <span>AI Visual Marketing Engine</span>
           </Link>
 
           <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', gap:'16px', flexWrap:'wrap' }}>
@@ -422,20 +436,45 @@ export default function TryOnPage() {
                     ))}
                   </div>
                   {/* Model cards */}
-                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'6px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: '8px', marginTop: '12px' }}>
                     {filteredStarters.map(m => (
                       <button key={m.id} type="button"
-                        onClick={() => {
-                          // In real app: fetch starter model image
-                          setShowStarters(false)
+                        onClick={() => handleStarterSelect(m.image)}
+                        className="starter-model-card"
+                        style={{ 
+                          position: 'relative', 
+                          padding: 0, 
+                          borderRadius: '12px', 
+                          border: `2px solid ${modelPreview === m.image ? T.accent2 : 'transparent'}`, 
+                          background: T.card, 
+                          cursor: 'pointer', 
+                          textAlign: 'left', 
+                          aspectRatio: '3/4', 
+                          overflow: 'hidden',
+                          boxShadow: modelPreview === m.image ? `0 4px 12px ${T.accent2}40` : 'none',
+                          transition: 'all .2s ease' 
                         }}
-                        style={{ padding:'8px', borderRadius:'9px', border:`1px solid ${T.border}`, background:T.card, cursor:'pointer', textAlign:'left', transition:'all .12s' }}
-                        onMouseEnter={e=>(e.currentTarget as HTMLElement).style.borderColor=T.accent}
-                        onMouseLeave={e=>(e.currentTarget as HTMLElement).style.borderColor=T.border}
                       >
-                        <div style={{ fontSize:'20px', marginBottom:'3px' }}>{m.icon}</div>
-                        <div style={{ fontSize:'10px', fontWeight:700, color:T.text }}>{m.label}</div>
-                        <div style={{ fontSize:'9px', color:T.muted }}>{m.desc}</div>
+                        {/* Gambar Model */}
+                        <img src={m.image} alt={m.label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        
+                        {/* Gradient Overlay & Teks */}
+                        <div style={{ 
+                          position: 'absolute', bottom: 0, left: 0, right: 0, 
+                          background: 'linear-gradient(to top, rgba(15,23,42,0.85) 0%, rgba(15,23,42,0.4) 60%, transparent 100%)', 
+                          padding: '24px 8px 8px 8px', 
+                          display: 'flex', flexDirection: 'column' 
+                        }}>
+                          <span style={{ fontSize: '10px', fontWeight: 800, color: '#fff', lineHeight: 1.2 }}>{m.label}</span>
+                          <span style={{ fontSize: '8px', color: 'rgba(255,255,255,0.7)', marginTop: '2px' }}>{m.desc}</span>
+                        </div>
+
+                        {/* Indikator Terpilih (Checkmark) */}
+                        {modelPreview === m.image && (
+                          <div style={{ position: 'absolute', top: '6px', right: '6px', width: '18px', height: '18px', borderRadius: '50%', background: T.accent2, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
+                            <Check size={10} color="#fff" strokeWidth={3} />
+                          </div>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -787,6 +826,16 @@ export default function TryOnPage() {
         @keyframes pulse { 50% { opacity: 0.3; } }
         @media (max-width: 992px) {
           .responsive-studio-grid { grid-template-columns: 1fr !important; }
+        }
+        .starter-model-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 16px rgba(0,0,0,0.08) !important;
+        }
+        .starter-model-card img {
+          transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .starter-model-card:hover img {
+          transform: scale(1.08);
         }
       `}</style>
     </div>

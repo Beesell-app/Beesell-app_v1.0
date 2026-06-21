@@ -40,7 +40,7 @@ export interface FeatureAccess {
   relight:          boolean                // AI Relight
   removeObject:     boolean                // Remove Object
 
-  // ── AI Image Generator ──────────────────
+  // ── AI Visual Marketing Engine ──────────────────
   photoshoot:       boolean                // AI Product Photoshoot
   packshot:         boolean                // AI Packshot Generator
   productToModel:   boolean                // Product to Model AI
@@ -168,7 +168,7 @@ export const PLANS: Record<PlanId, Plan> = {
       'Hanya 5 generate total — TIDAK reset per bulan',
       '1 akun per nomor HP + 1 email (verifikasi keduanya)',
       'Semua hasil memiliki watermark BeeSell AI',
-      'Tidak bisa akses AI Image Generator premium',
+      'Tidak bisa akses AI Visual Marketing Engine premium',
       'Tidak bisa download tanpa watermark',
     ],
   },

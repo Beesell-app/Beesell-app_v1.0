@@ -4,7 +4,8 @@ import type { Metadata, Viewport } from 'next'
 import Script from 'next/script'
 import { DM_Sans, Fraunces, DM_Mono } from 'next/font/google'
 import Providers from './providers'
-
+import './global.css'
+import './globals-responsive.css'
 
 // ── Fonts ──────────────────────────────────────────────────────
 const dmSans = DM_Sans({
@@ -149,7 +150,7 @@ const dmMono = DM_Mono({
 })
 
 // ── Metadata (SEO + OG) ────────────────────────────────────────
-const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://beesell.com'
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://beesell.ai'
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -285,7 +286,7 @@ export const metadata: Metadata = {
     'social commerce AI',
 
     // ── AI Image & Visual Generator ────────────────────
-    'ai image generator indonesia',
+    'AI Visual Marketing Engine',
     'ai product image',
     'ai ugc generator',
     'ugc content generator',
@@ -450,8 +451,8 @@ export const viewport: Viewport = {
   initialScale:      1,
   maximumScale:      5,
   themeColor:        [
-    { media: '(prefers-color-scheme: light)', color: '#2563EB' },
-    { media: '(prefers-color-scheme: dark)',  color: '#1D4ED8' },
+    { media: '(prefers-color-scheme: light)', color: '#F59E0B' },
+    { media: '(prefers-color-scheme: dark)',  color: '#D97706' },
   ],
 }
 
@@ -490,7 +491,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           strategy="afterInteractive"
         />
         <script
-          id="website-schema"
+          id="software-app-schema"
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify({
             '@context': 'https://schema.org',
@@ -579,8 +580,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {/* Google Analytics */}
         {GA_ID && (
           <>
-            
-            
+            <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} strategy="afterInteractive" />
+            <Script id="google-analytics" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html:
+              `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','${GA_ID}');` }} />
           </>
         )}
             <Script

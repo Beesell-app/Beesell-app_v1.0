@@ -30,14 +30,13 @@ interface Step3Props {
   selectedAvatarId: string | null
   avatarSource: 'preset' | 'collection' | 'custom' | null
   onSelectAvatar: (avatarId: string, source: 'preset' | 'collection' | 'custom') => void
-  onNext: () => void
+  // onNext dihapus karena navigasi sudah ditangani oleh page.tsx utama
 }
 
-export function Step3Character({
+export default function Step3Character({
   selectedAvatarId,
   avatarSource,
   onSelectAvatar,
-  onNext,
 }: Step3Props) {
   // ── Tabs ────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<'preset' | 'collection' | 'custom'>('preset')
@@ -221,18 +220,8 @@ export function Step3Character({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      {/* HEADER */}
-      <div>
-        <h3 style={{ fontSize: '14px', fontWeight: 700, color: C.ink, marginBottom: '8px' }}>
-          Pilih Karakter AI Avatar
-        </h3>
-        <p style={{ fontSize: '12px', color: C.inkMuted, marginBottom: '14px' }}>
-          Pilih dari preset, koleksi, atau upload foto sendiri
-        </p>
-      </div>
-
       {/* TABS */}
-      <div style={{ display: 'flex', gap: '6px', marginBottom: '16px' }}>
+      <div style={{ display: 'flex', gap: '6px' }}>
         {(['preset', 'collection', 'custom'] as const).map(tab => (
           <button
             key={tab}
@@ -741,25 +730,6 @@ export function Step3Character({
         </div>
       )}
 
-      {/* NEXT BUTTON */}
-      <button
-        onClick={onNext}
-        disabled={!selectedAvatarId}
-        style={{
-          padding: '12px 16px',
-          borderRadius: '10px',
-          border: 'none',
-          background: selectedAvatarId ? C.amber : '#ccc',
-          color: '#fff',
-          fontWeight: 700,
-          fontSize: '13px',
-          cursor: selectedAvatarId ? 'pointer' : 'not-allowed',
-          transition: 'all .2s',
-        }}
-      >
-        Lanjut ke Step 4 →
-      </button>
-
       <style>{`
         @keyframes spin {
           to { transform: rotate(360deg); }
@@ -768,5 +738,3 @@ export function Step3Character({
     </div>
   )
 }
-
-export default Step3Character

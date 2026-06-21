@@ -20,32 +20,41 @@ import {
   AlertCircle, ChevronRight, Info, ZoomIn, CheckCircle2,
   Camera, User, Maximize2, RotateCcw, Lightbulb, AlertTriangle,
 } from 'lucide-react'
+import { ToolGate }        from '@/components/studio/ToolGate'
+import { ToolAccessBadge } from '@/components/studio/ToolAccessBadge'
 
-// ── Tokens — dark studio (distinct pink/rose accent for face swap) ─
+const FEATURE_ID = 'face-swap'
+
+// ── Palette amber-light (sama untuk model-swap & face-swap) ───
 const T = {
-  bg:       '#09090B',
-  surface:  '#111115',
-  card:     '#18181C',
-  border:   '#27272A',
-  borderHi: '#3F3F46',
-  accent:   '#F43F5E',   // rose-500 — face swap identity color
-  accent2:  '#E11D48',
-  accentLo: '#F43F5E12',
-  accentMd: '#F43F5E28',
-  gold:     '#F59E0B',
-  goldLo:   '#F59E0B15',
-  blue:     '#3B82F6',
-  blueLo:   '#3B82F612',
-  green:    '#10B981',
-  greenLo:  '#10B98112',
-  orange:   '#F97316',
-  red:      '#EF4444',
-  redLo:    '#EF444415',
-  muted:    '#52525B',
-  dimmed:   '#71717A',
-  sub:      '#A1A1AA',
-  text:     '#E4E4E7',
-  white:    '#FAFAFA',
+  bg:       '#FFFBF5',   // krem hangat (bg halaman)
+  surface:  '#FFFFFF',
+  card:     '#FFFFFF',
+  border:   '#F4E4C8',   // garis amber muda
+  borderHi: '#F5C451',
+  accent:   '#F59E0B',   // amber-500 (warna lebah)
+  accent2:  '#D97706',
+  accentLo: '#F59E0B14',
+  accentMd: '#F59E0B26',
+  gold:     '#B45309',   // amber-700 — judul, kontras di putih
+  goldLo:   '#F59E0B14',
+  amber:    '#F59E0B',
+  blue:     '#2563EB',  blueLo:  '#2563EB14',
+  green:    '#059669',  greenLo: '#05966914',
+  red:      '#DC2626',  redLo:   '#DC262614',
+  orange:   '#EA580C',
+  muted:    '#8A7A66',   // teks tersier
+  dimmed:   '#A99C88',
+  sub:      '#6B5B47',   // teks sekunder
+  text:     '#3A2A14',   // teks utama (cokelat gelap)
+  white:    '#FFFFFF',   // teks DI ATAS overlay gelap & handle slider — biarkan putih
+}
+
+// ── Step number badge (penanda alur langkah) ──────────────────
+function Step({ n }: { n: number }) {
+  return (
+    <span style={{ width:'19px', height:'19px', borderRadius:'50%', background:T.accent, color:'#fff', fontSize:'10px', fontWeight:800, display:'inline-flex', alignItems:'center', justifyContent:'center', flexShrink:0, boxShadow:`0 1px 4px ${T.accent}55` }}>{n}</span>
+  )
 }
 
 // ── Face quality tips ─────────────────────────────────────────
@@ -125,7 +134,7 @@ function UploadZone({ label, sublabel, icon, badge, preview, onFile, onClear, ac
         onDragOver={e=>{e.preventDefault();setDrag(true)}}
         onDragLeave={()=>setDrag(false)}
         onDrop={handleDrop}
-        style={{ borderRadius:'12px', border:`1.5px dashed ${drag ? accent : preview ? `${accent}50` : T.border}`, background:drag ? `${accent}07` : preview ? T.surface : 'rgba(255,255,255,.018)', cursor:'pointer', overflow:'hidden', transition:'all .18s', minHeight:compact ? '140px' : '190px', position:'relative' }}>
+        style={{ borderRadius:'12px', border:`1.5px dashed ${drag ? accent : preview ? `${accent}50` : T.border}`, background:drag ? `${accent}07` : preview ? T.surface : T.bg, cursor:'pointer', overflow:'hidden', transition:'all .18s', minHeight:compact ? '140px' : '190px', position:'relative' }}>
         {preview ? (
           <img src={preview} alt={label} style={{ width:'100%', minHeight:compact ? '140px' : '190px', objectFit:'cover', display:'block' }}/>
         ) : (
@@ -190,10 +199,10 @@ function BASlider({ before, after, labelA='Asli', labelB='Swap' }: { before:stri
       <div style={{ position:'absolute', top:0, bottom:0, left:`${pos}%`, width:'2px', background:'rgba(255,255,255,.9)', transform:'translateX(-50%)', pointerEvents:'none' }}>
         <div style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)', width:'30px', height:'30px', borderRadius:'50%', background:T.white, border:`2px solid ${T.accent}`, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 2px 10px rgba(0,0,0,.5)', fontSize:'12px' }}>⇄</div>
       </div>
-      {/* Labels */}
+      {/* Labels — teks di atas overlay gelap, biarkan putih */}
       <div style={{ position:'absolute', top:'10px', left:'10px', padding:'3px 8px', borderRadius:'5px', background:'rgba(0,0,0,.65)', fontSize:'10px', fontWeight:700, color:T.white, backdropFilter:'blur(4px)' }}>{labelA}</div>
-      <div style={{ position:'absolute', top:'10px', right:'10px', padding:'3px 8px', borderRadius:'5px', background:`${T.accent}dd`, fontSize:'10px', fontWeight:700, color:T.white }}>{labelB}</div>
-      <div style={{ position:'absolute', bottom:'10px', left:'50%', transform:'translateX(-50%)', padding:'3px 10px', borderRadius:'5px', background:'rgba(0,0,0,.55)', fontSize:'9px', color:T.sub, whiteSpace:'nowrap', backdropFilter:'blur(4px)' }}>← Drag untuk perbandingan →</div>
+      <div style={{ position:'absolute', top:'10px', right:'10px', padding:'3px 8px', borderRadius:'5px', background:`${T.accent}e6`, fontSize:'10px', fontWeight:700, color:T.white }}>{labelB}</div>
+      <div style={{ position:'absolute', bottom:'10px', left:'50%', transform:'translateX(-50%)', padding:'3px 10px', borderRadius:'5px', background:'rgba(0,0,0,.55)', fontSize:'9px', color:T.white, whiteSpace:'nowrap', backdropFilter:'blur(4px)' }}>← Drag untuk perbandingan →</div>
     </div>
   )
 }
@@ -307,7 +316,8 @@ export default function FaceSwapPage() {
   const canGenerate = !!targetFile && !!faceFile && !generating
 
   return (
-    <div style={{ minHeight:'100vh', background:T.bg, fontFamily:"'DM Sans',system-ui,sans-serif", color:T.text }}>
+    <ToolGate featureId={FEATURE_ID} theme="light">
+    <div style={{ minHeight:'100%', maxWidth:'100%', overflowX:'hidden', background:T.bg, fontFamily:"'DM Sans',system-ui,sans-serif", color:T.text }}>
 
       {/* Top bar */}
       <div style={{ borderBottom:`1px solid ${T.border}`, padding:'13px 20px', display:'flex', alignItems:'center', gap:'14px', background:T.surface, position:'sticky', top:0, zIndex:100 }}>
@@ -320,7 +330,7 @@ export default function FaceSwapPage() {
         <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
           <div style={{ width:'28px', height:'28px', borderRadius:'8px', background:`${T.accent}15`, border:`1px solid ${T.accent}35`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'14px' }}>😊</div>
           <div>
-            <div style={{ fontSize:'13px', fontWeight:700, color:T.white }}>Face Swap AI</div>
+            <div style={{ fontSize:'13px', fontWeight:700, color:T.gold }}>Face Swap AI</div>
             <div style={{ fontSize:'10px', color:T.muted }}>Ganti wajah model, outfit & pose tetap</div>
           </div>
         </div>
@@ -330,12 +340,13 @@ export default function FaceSwapPage() {
               {quotaInfo.used}/{quotaInfo.limit} swap/bln
             </div>
           )}
+          <ToolAccessBadge featureId={FEATURE_ID} />
           <div style={{ padding:'4px 10px', borderRadius:'6px', background:`${T.accent}12`, border:`1px solid ${T.accent}30`, fontSize:'11px', fontWeight:600, color:T.accent }}>Pro+ Only</div>
         </div>
       </div>
 
       {/* Body */}
-      <div style={{ maxWidth:'1200px', margin:'0 auto', padding:'20px', display:'grid', gridTemplateColumns:'360px 1fr', gap:'20px', alignItems:'flex-start' }}>
+      <div className="bs-grid" style={{ maxWidth:'1200px', margin:'0 auto', padding:'20px', display:'grid', gap:'20px', alignItems:'flex-start' }}>
 
         {/* ════ LEFT — Controls ════ */}
         <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
@@ -347,16 +358,17 @@ export default function FaceSwapPage() {
             </div>
             <div style={{ fontSize:'11px', color:T.sub, lineHeight:1.7 }}>
               <span style={{ color:T.accent }}>✓ Dipertahankan:</span> outfit, pose, body shape, lighting, background<br/>
-              <span style={{ color:'#FB923C' }}>🔄 Diganti:</span> wajah saja<br/>
+              <span style={{ color:T.orange }}>🔄 Diganti:</span> wajah saja<br/>
               <span style={{ color:T.muted }}>Max resolusi output: 2K (per spec)</span>
             </div>
           </div>
 
-          {/* ── Target photo ─────────────────────────────── */}
+          {/* ── Target photo — LANGKAH 1 ──────────────────── */}
           <div style={{ padding:'16px', borderRadius:'14px', background:T.card, border:`1px solid ${T.border}` }}>
             <div style={{ display:'flex', alignItems:'center', gap:'7px', marginBottom:'12px' }}>
+              <Step n={1}/>
               <Camera size={14} color={T.accent}/>
-              <span style={{ fontSize:'12px', fontWeight:700, color:T.white, textTransform:'uppercase', letterSpacing:'0.06em' }}>Foto Target</span>
+              <span style={{ fontSize:'12px', fontWeight:700, color:T.text, textTransform:'uppercase', letterSpacing:'0.06em' }}>Foto Target</span>
               <span style={{ fontSize:'9px', color:T.accent, fontWeight:700, padding:'2px 6px', borderRadius:'4px', background:`${T.accent}15` }}>WAJIB</span>
             </div>
             <UploadZone
@@ -370,19 +382,20 @@ export default function FaceSwapPage() {
               required
               tips={['Full body atau half body model','Wajah terlihat jelas di foto','Resolusi min 800×800px']}
             />
-            <div style={{ marginTop:'9px', padding:'9px 11px', borderRadius:'8px', background:`${T.blue}10`, border:`1px solid ${T.blue}25`, display:'flex', gap:'7px', alignItems:'flex-start' }}>
+            <div style={{ marginTop:'9px', padding:'9px 11px', borderRadius:'8px', background:T.blueLo, border:`1px solid ${T.blue}30`, display:'flex', gap:'7px', alignItems:'flex-start' }}>
               <Lightbulb size={12} color={T.blue} style={{ flexShrink:0, marginTop:'1px' }}/>
-              <div style={{ fontSize:'10px', color:'#93C5FD', lineHeight:1.6 }}>
+              <div style={{ fontSize:'10px', color:T.blue, lineHeight:1.6 }}>
                 Untuk hasil terbaik, pastikan angle wajah di foto target <strong>mirip</strong> dengan angle di foto wajah referensi.
               </div>
             </div>
           </div>
 
-          {/* ── Face reference ───────────────────────────── */}
+          {/* ── Face reference — LANGKAH 2 ────────────────── */}
           <div style={{ padding:'16px', borderRadius:'14px', background:T.card, border:`1px solid ${T.border}` }}>
             <div style={{ display:'flex', alignItems:'center', gap:'7px', marginBottom:'12px' }}>
+              <Step n={2}/>
               <User size={14} color={T.accent}/>
-              <span style={{ fontSize:'12px', fontWeight:700, color:T.white, textTransform:'uppercase', letterSpacing:'0.06em' }}>Wajah Referensi</span>
+              <span style={{ fontSize:'12px', fontWeight:700, color:T.text, textTransform:'uppercase', letterSpacing:'0.06em' }}>Wajah Referensi</span>
               <span style={{ fontSize:'9px', color:T.accent, fontWeight:700, padding:'2px 6px', borderRadius:'4px', background:`${T.accent}15` }}>WAJIB</span>
             </div>
             <UploadZone
@@ -412,24 +425,25 @@ export default function FaceSwapPage() {
             </div>
           </div>
 
-          {/* ── Match Mode ──────────────────────────────── */}
+          {/* ── Match Mode — LANGKAH 3 ────────────────────── */}
           <div style={{ padding:'16px', borderRadius:'14px', background:T.card, border:`1px solid ${T.border}` }}>
             <div style={{ display:'flex', alignItems:'center', gap:'7px', marginBottom:'12px' }}>
+              <Step n={3}/>
               <Sparkles size={14} color={T.accent}/>
-              <span style={{ fontSize:'12px', fontWeight:700, color:T.white, textTransform:'uppercase', letterSpacing:'0.06em' }}>Match Mode</span>
+              <span style={{ fontSize:'12px', fontWeight:700, color:T.text, textTransform:'uppercase', letterSpacing:'0.06em' }}>Match Mode</span>
             </div>
             <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
               {MATCH_MODES.map(m => {
                 const sel = matchMode === m.id
                 return (
                   <button key={m.id} type="button" onClick={() => setMatchMode(m.id as any)}
-                    style={{ padding:'12px 13px', borderRadius:'11px', border:`1.5px solid ${sel ? m.color : T.border}`, background:sel ? `${m.color}10` : 'rgba(255,255,255,.018)', cursor:'pointer', textAlign:'left', transition:'all .15s', boxShadow:sel ? `0 0 0 1px ${m.color}30` : 'none' }}
+                    style={{ padding:'12px 13px', borderRadius:'11px', border:`1.5px solid ${sel ? m.color : T.border}`, background:sel ? `${m.color}10` : T.bg, cursor:'pointer', textAlign:'left', transition:'all .15s', boxShadow:sel ? `0 0 0 1px ${m.color}30` : 'none' }}
                     onMouseEnter={e=>{ if(!sel)(e.currentTarget as HTMLElement).style.borderColor=T.borderHi }}
                     onMouseLeave={e=>{ if(!sel)(e.currentTarget as HTMLElement).style.borderColor=T.border }}>
                     <div style={{ display:'flex', alignItems:'center', gap:'7px', marginBottom:'5px' }}>
                       <span style={{ fontSize:'17px' }}>{m.icon}</span>
                       <span style={{ fontSize:'12px', fontWeight:700, color:sel ? m.color : T.text }}>{m.label}</span>
-                      <span style={{ fontSize:'9px', fontWeight:700, padding:'2px 6px', borderRadius:'4px', background:`${m.color}20`, color:m.color, marginLeft:'auto' }}>{m.badge}</span>
+                      <span style={{ fontSize:'9px', fontWeight:700, padding:'2px 6px', borderRadius:'4px', background:`${m.color}20`, color:m.color, marginLeft:'auto', flexShrink:0 }}>{m.badge}</span>
                     </div>
                     <div style={{ fontSize:'11px', color:T.sub, lineHeight:1.5, paddingLeft:'24px' }}>{m.desc}</div>
                   </button>
@@ -467,9 +481,9 @@ export default function FaceSwapPage() {
             </div>
           </div>
 
-          {/* Generate button */}
+          {/* Generate button — LANGKAH 4 */}
           <button type="button" onClick={generate} disabled={!canGenerate}
-            style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', padding:'14px', borderRadius:'12px', width:'100%', border:'none', cursor:canGenerate ? 'pointer' : 'not-allowed', background:canGenerate ? `linear-gradient(135deg,${T.accent},${T.accent2})` : T.muted, color:'#fff', fontSize:'14px', fontWeight:700, opacity:canGenerate ? 1 : .45, transition:'all .18s', boxShadow:canGenerate ? `0 4px 20px ${T.accent}35` : 'none', fontFamily:'inherit' }}
+            style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', padding:'14px', borderRadius:'12px', width:'100%', border:'none', cursor:canGenerate ? 'pointer' : 'not-allowed', background:canGenerate ? `linear-gradient(135deg,${T.accent},${T.accent2})` : T.muted, color:'#fff', fontSize:'14px', fontWeight:700, opacity:canGenerate ? 1 : .45, transition:'all .18s', boxShadow:canGenerate ? `0 4px 20px ${T.accent}40` : 'none', fontFamily:'inherit' }}
             onMouseEnter={e=>{ if(canGenerate)(e.currentTarget as HTMLElement).style.transform='translateY(-1px)' }}
             onMouseLeave={e=>{ (e.currentTarget as HTMLElement).style.transform='translateY(0)' }}>
             {generating ? (
@@ -490,7 +504,7 @@ export default function FaceSwapPage() {
           {/* Header */}
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'14px' }}>
             <div>
-              <div style={{ fontSize:'15px', fontWeight:700, color:T.white }}>Hasil Face Swap</div>
+              <div style={{ fontSize:'15px', fontWeight:700, color:T.gold }}>Hasil Face Swap</div>
               <div style={{ fontSize:'11px', color:T.muted, marginTop:'2px' }}>
                 {result
                   ? `${currentMode.label} · ${elapsed ? `${elapsed}s` : '–'} · Max 2K`
@@ -517,7 +531,7 @@ export default function FaceSwapPage() {
               <AlertCircle size={16} color={T.red} style={{ flexShrink:0, marginTop:'1px' }}/>
               <div>
                 <div style={{ fontSize:'13px', fontWeight:600, color:T.red, marginBottom:'3px' }}>Generate Gagal</div>
-                <div style={{ fontSize:'12px', color:'#FCA5A5', lineHeight:1.5 }}>{error}</div>
+                <div style={{ fontSize:'12px', color:T.red, lineHeight:1.5 }}>{error}</div>
                 {error.includes('Pro') && (
                   <Link href="/billing" style={{ display:'inline-flex', alignItems:'center', gap:'4px', marginTop:'8px', padding:'6px 12px', borderRadius:'7px', background:`linear-gradient(135deg,${T.gold},#D97706)`, color:'#fff', fontSize:'11px', fontWeight:700, textDecoration:'none' }}>
                     <ChevronRight size={11}/> Upgrade ke Pro
@@ -536,11 +550,11 @@ export default function FaceSwapPage() {
                 <div style={{ position:'absolute', inset:'16px', borderRadius:'50%', background:`${T.accent}12`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'22px' }}>😊</div>
               </div>
               <div style={{ textAlign:'center' }}>
-                <div style={{ fontSize:'15px', fontWeight:700, color:T.white, marginBottom:'6px' }}>AI sedang mengganti wajah...</div>
+                <div style={{ fontSize:'15px', fontWeight:700, color:T.text, marginBottom:'6px' }}>AI sedang mengganti wajah...</div>
                 <div style={{ fontSize:'12px', color:T.muted, marginBottom:'4px' }}>Mode: {currentMode.label}</div>
                 <div style={{ fontSize:'11px', color:T.dimmed }}>Outfit, pose & background dipertahankan · {seconds}s</div>
               </div>
-              <div style={{ display:'flex', gap:'10px', alignItems:'center', fontSize:'10px', color:T.muted }}>
+              <div style={{ display:'flex', gap:'10px', alignItems:'center', fontSize:'10px', color:T.muted, flexWrap:'wrap', justifyContent:'center' }}>
                 {['Deteksi wajah', 'Extract features', 'Swap & restore'].map((step, i) => {
                   const done = seconds > [3,8,15][i]
                   return (
@@ -568,7 +582,7 @@ export default function FaceSwapPage() {
                 </div>
               </div>
               {/* Flow diagram */}
-              <div style={{ display:'flex', gap:'8px', alignItems:'center', marginTop:'8px', padding:'14px 20px', borderRadius:'12px', background:'rgba(255,255,255,.02)', border:`1px solid ${T.border}` }}>
+              <div style={{ display:'flex', gap:'8px', alignItems:'center', marginTop:'8px', padding:'14px 20px', borderRadius:'12px', background:T.bg, border:`1px solid ${T.border}` }}>
                 <div style={{ textAlign:'center' }}>
                   <div style={{ fontSize:'24px', marginBottom:'4px' }}>📸</div>
                   <div style={{ fontSize:'9px', color:T.muted }}>Foto Target</div>
@@ -604,7 +618,7 @@ export default function FaceSwapPage() {
                 <div style={{ borderRadius:'14px', overflow:'hidden', border:`1px solid ${T.border}`, marginBottom:'12px', position:'relative', background:T.surface }}>
                   <img src={result} alt="Face Swap Result" style={{ width:'100%', display:'block', maxHeight:'640px', objectFit:'contain' }}/>
                   {/* Badges */}
-                  <div style={{ position:'absolute', top:'12px', left:'12px', padding:'4px 10px', borderRadius:'7px', background:'rgba(0,0,0,.65)', fontSize:'10px', fontWeight:700, color:T.accent, backdropFilter:'blur(6px)' }}>
+                  <div style={{ position:'absolute', top:'12px', left:'12px', padding:'4px 10px', borderRadius:'7px', background:'rgba(0,0,0,.65)', fontSize:'10px', fontWeight:700, color:T.white, backdropFilter:'blur(6px)' }}>
                     😊 {currentMode.label}
                   </div>
                   {/* Overlay actions */}
@@ -614,14 +628,14 @@ export default function FaceSwapPage() {
                       <ZoomIn size={15} color={T.white}/>
                     </button>
                     <button type="button" onClick={download}
-                      style={{ display:'flex', alignItems:'center', gap:'5px', padding:'8px 14px', borderRadius:'8px', background:`linear-gradient(135deg,${T.accent},${T.accent2})`, border:'none', color:'#fff', fontSize:'12px', fontWeight:700, cursor:'pointer', boxShadow:`0 2px 12px ${T.accent}40`, fontFamily:'inherit' }}>
+                      style={{ display:'flex', alignItems:'center', gap:'5px', padding:'8px 14px', borderRadius:'8px', background:`linear-gradient(135deg,${T.accent},${T.accent2})`, border:'none', color:'#fff', fontSize:'12px', fontWeight:700, cursor:'pointer', boxShadow:`0 2px 12px ${T.accent}55`, fontFamily:'inherit' }}>
                       <Download size={13}/> Download
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* Action row */}
+              {/* Action row — 4 kolom */}
               <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'7px', marginBottom:'12px' }}>
                 {[
                   { icon:<Download size={14}/>,   label:'Download',     action:download,            color:T.accent },
@@ -651,7 +665,7 @@ export default function FaceSwapPage() {
                   </div>
                   <div style={{ display:'flex', gap:'6px', marginTop:'7px', flexWrap:'wrap' }}>
                     {['✅ Outfit terjaga','✅ Pose tetap','✅ Lighting sama','🔄 Wajah baru'].map(tag=>(
-                      <span key={tag} style={{ fontSize:'10px', fontWeight:600, padding:'2px 8px', borderRadius:'99px', background:'rgba(255,255,255,.06)', color:T.sub }}>{tag}</span>
+                      <span key={tag} style={{ fontSize:'10px', fontWeight:600, padding:'2px 8px', borderRadius:'99px', background:T.goldLo, color:T.sub }}>{tag}</span>
                     ))}
                   </div>
                 </div>
@@ -676,9 +690,9 @@ export default function FaceSwapPage() {
                 </div>
               </div>
 
-              {/* Next steps */}
+              {/* Next steps — 3 kolom */}
               <div style={{ padding:'13px 14px', borderRadius:'11px', background:T.card, border:`1px solid ${T.border}` }}>
-                <div style={{ fontSize:'11px', fontWeight:700, color:T.white, marginBottom:'10px' }}>Langkah Selanjutnya</div>
+                <div style={{ fontSize:'11px', fontWeight:700, color:T.text, marginBottom:'10px' }}>Langkah Selanjutnya</div>
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'6px' }}>
                   {[
                     { icon:'🔍', label:'Upscale 4K',       href:'/studio/image/upscale',     color:T.gold },
@@ -686,9 +700,9 @@ export default function FaceSwapPage() {
                     { icon:'📐', label:'Crop Marketplace', href:'/quick-tools',               color:T.accent },
                   ].map((item, i) => (
                     <Link key={i} href={item.href}
-                      style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'5px', padding:'10px 5px', borderRadius:'9px', border:`1px solid ${T.border}`, background:'rgba(255,255,255,.02)', textDecoration:'none', transition:'all .15s' }}
+                      style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'5px', padding:'10px 5px', borderRadius:'9px', border:`1px solid ${T.border}`, background:T.bg, textDecoration:'none', transition:'all .15s' }}
                       onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=item.color;(e.currentTarget as HTMLElement).style.background=`${item.color}10`}}
-                      onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=T.border;(e.currentTarget as HTMLElement).style.background='rgba(255,255,255,.02)'}}>
+                      onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=T.border;(e.currentTarget as HTMLElement).style.background=T.bg}}>
                       <span style={{ fontSize:'16px' }}>{item.icon}</span>
                       <span style={{ fontSize:'10px', fontWeight:600, color:item.color, textAlign:'center' }}>{item.label}</span>
                     </Link>
@@ -704,14 +718,16 @@ export default function FaceSwapPage() {
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
         * { box-sizing:border-box }
         @keyframes spin { to { transform:rotate(360deg) } }
-        ::-webkit-scrollbar { width:5px }
-        ::-webkit-scrollbar-thumb { background:#3F3F46; border-radius:3px }
-        @media (max-width:860px) {
-          div[style*="grid-template-columns: 360px"] {
-            grid-template-columns: 1fr !important;
-          }
-        }
+        ::-webkit-scrollbar { width:6px }
+        ::-webkit-scrollbar-track { background:#FBEFD8 }
+        ::-webkit-scrollbar-thumb { background:#E7D3A8; border-radius:3px }
+
+        /* Grid 2 kolom: kiri kontrol, kanan hasil. minmax(0,1fr) + min-width:0 = anti-overflow */
+        .bs-grid { grid-template-columns: minmax(300px,360px) minmax(0,1fr); }
+        .bs-grid > div { min-width: 0; }
+        @media (max-width: 980px) { .bs-grid { grid-template-columns: 1fr; } }
       `}</style>
     </div>
+    </ToolGate>
   )
 }

@@ -1,392 +1,633 @@
 // lib/studio/tiktok/presets.ts
 // ══════════════════════════════════════════════════════════════
-// TIKTOK REELS AI — Presets, Hooks, Script Engine, Hashtag AI
+// BEESELL AI — TIKTOK REELS PRESETS (single source of truth)
+// ──────────────────────────────────────────────────────────────
+// Berisi:
+//   • 12 jenis script (SCRIPT_VARIANTS) + struktur framework
+//   • Platform (TikTok / Reels / Shorts) + limit hashtag + flag API
+//   • Opsi durasi (DURATION_OPTIONS)
+//   • Visual sequence / shot list per jenis script (VISUAL_SEQUENCES)
+//   • Preset integrasi TikTok API:
+//       - TIKTOK_POST_PRESETS  (privacy + commercial disclosure)
+//       - TIKTOK_TRENDING_SOUND_TYPES (kategori sound)
+//       - HASHTAG_STRATEGY (formula mix hashtag)
+//       - buildTikTokPostPayload() → payload siap Content Posting API
 // ══════════════════════════════════════════════════════════════
 
 // ── Types ─────────────────────────────────────────────────────
 export type ScriptVariantId =
-  | 'soft-selling'
-  | 'hard-selling'
-  | 'storytelling'
   | 'ugc-review'
-  | 'product-review'
-  | 'comparison'
-  | 'affiliate'
-  | 'problem-solution'
-  | 'before-after'
-  | 'tutorial'
+  | 'pas'
+  | 'storytelling'
   | 'unboxing'
-  | 'testimonial'
+  | 'tutorial'
+  | 'before-after'
+  | 'affiliate'
+  | 'live-promo'
+  | 'comparison'
+  | 'trending-sound'
+  | 'flash-sale'
+  | 'educational'
 
-export type DurationSec  = 15 | 30 | 45 | 60 | 90
-export type PlatformId   = 'tiktok' | 'reels' | 'shorts' | 'tiktok-shop' | 'shopee-video'
-export type NicheId      = 'fashion' | 'beauty' | 'skincare' | 'food' | 'gadget' | 'health' | 'home' | 'baby' | 'hijab' | 'general'
-export type InputMode    = 'url' | 'manual'
+export type PlatformId = 'tiktok' | 'reels' | 'shorts'
 
-// ── Script variant metadata ────────────────────────────────────
+export type NicheId =
+  | 'general'
+  | 'fashion'
+  | 'beauty'
+  | 'skincare'
+  | 'food'
+  | 'gadget'
+  | 'health'
+  | 'home'
+  | 'baby'
+  | 'hijab'
+
+export type DurationSec = 15 | 30 | 45 | 60
+export type CvrLevel = 'low' | 'medium' | 'high'
+
+// ══════════════════════════════════════════════════════════════
+// SCRIPT VARIANTS — 12 jenis
+// ══════════════════════════════════════════════════════════════
 export interface ScriptVariant {
-  id:           ScriptVariantId
-  label:        string
-  icon:         string
-  desc:         string
-  hookStyle:    string
-  structure:    string[]  // steps
-  idealDuration:DurationSec
-  cvr:          'low' | 'medium' | 'high'
-  badge?:       string
+  id: ScriptVariantId
+  label: string
+  icon: string
+  badge?: string
+  desc: string
+  framework: string        // AIDA / PAS / BAB / Direct Response, dll
+  structure: string[]      // urutan beat script
+  idealDuration: DurationSec
+  cvr: CvrLevel            // perkiraan kekuatan konversi
+  bestFor: NicheId[]       // niche paling cocok (panduan)
 }
 
 export const SCRIPT_VARIANTS: ScriptVariant[] = [
   {
-    id:'soft-selling', label:'Soft Selling', icon:'💫', cvr:'medium',
-    desc:'Edukasi dulu, jual kemudian. Trust building, tidak terasa jualan.',
-    hookStyle:'Informasi/tips yang relate dengan target market',
-    structure:['Fakta menarik / Tips', 'Problem relatable', 'Edukasi solusi', 'Produk sebagai solusi alami', 'Soft CTA'],
-    idealDuration:60,
+    id: 'ugc-review',
+    label: 'UGC Review',
+    icon: '🗣️',
+    badge: 'TOP',
+    desc: 'Review jujur ala user — paling natural & dipercaya untuk affiliate',
+    framework: 'Story Selling + Social Proof',
+    structure: [
+      'Hook: reaksi jujur / keluhan relatable di 3 detik pertama',
+      'Konteks: kenapa akhirnya coba produk ini',
+      'Demo: tunjukkan produk dipakai langsung',
+      'Hasil: before vs after / reaksi spontan',
+      'CTA: ajak beli + arahkan ke keranjang kuning',
+    ],
+    idealDuration: 30,
+    cvr: 'high',
+    bestFor: ['skincare', 'beauty', 'food', 'general'],
   },
   {
-    id:'hard-selling', label:'Hard Selling', icon:'🔥', cvr:'high', badge:'High CVR',
-    desc:'Direct offer, urgency tinggi, harga & promo langsung di depan.',
-    hookStyle:'Penawaran langsung + angka/harga yang menarik',
-    structure:['Hook offer langsung', 'Benefit + harga', 'Urgency/scarcity', 'Testimonial singkat', 'CTA kuat'],
-    idealDuration:30,
+    id: 'pas',
+    label: 'Problem-Solution',
+    icon: '🎯',
+    desc: 'Angkat masalah, perbesar, lalu tawarkan produk sebagai solusi',
+    framework: 'PAS (Problem-Agitate-Solution)',
+    structure: [
+      'Problem: angkat masalah yang relatable',
+      'Agitate: perbesar rasa frustrasi & dampaknya',
+      'Solution: kenalkan produk sebagai jawaban',
+      'Proof: bukti / testimoni singkat',
+      'CTA: solusi sekarang juga sebelum nyesel',
+    ],
+    idealDuration: 30,
+    cvr: 'high',
+    bestFor: ['health', 'skincare', 'home', 'gadget'],
   },
   {
-    id:'storytelling', label:'Storytelling', icon:'📖', cvr:'medium',
-    desc:'Narasi personal yang emosional. Sebelum → sesudah → produk.',
-    hookStyle:'Cerita personal yang relate dan emotional',
-    structure:['Situasi awal (before)', 'Problem & emosi', 'Titik balik / discovery', 'Perubahan (after)', 'Produk & CTA'],
-    idealDuration:90,
+    id: 'storytelling',
+    label: 'Story Selling',
+    icon: '📖',
+    desc: 'Cerita transformasi personal yang bikin nonton sampai habis',
+    framework: 'Before-After-Bridge',
+    structure: [
+      'Hook: mulai cerita "Dulu aku..."',
+      'Konflik: titik terendah / masalah',
+      'Penemuan: momen ketemu produk',
+      'Transformasi: hidup / hasil berubah',
+      'CTA: ajak penonton ikut transformasi',
+    ],
+    idealDuration: 45,
+    cvr: 'medium',
+    bestFor: ['health', 'beauty', 'general', 'baby'],
   },
   {
-    id:'ugc-review', label:'UGC Review', icon:'🎭', cvr:'high', badge:'Terpopuler',
-    desc:'User Generated Content authentik. Gaya organic, bukan iklan.',
-    hookStyle:'Bicara casual seperti share ke teman, genuine',
-    structure:['Konteks diri / siapa kamu', 'Kenapa coba produk ini', 'First impression', 'Hasil nyata', 'Rekomendasi + CTA'],
-    idealDuration:45,
+    id: 'unboxing',
+    label: 'Unboxing',
+    icon: '📦',
+    desc: 'Buka paket + first impression — memicu rasa ingin punya',
+    framework: 'AIDA',
+    structure: [
+      'Hook: "Paket baru dateng nih!"',
+      'Buka kemasan: tunjukkan detail packaging',
+      'First impression: pegang & rasakan tekstur',
+      'Demo cepat: tes fungsi utama',
+      'CTA: link keranjang + diskon',
+    ],
+    idealDuration: 30,
+    cvr: 'medium',
+    bestFor: ['gadget', 'fashion', 'beauty', 'home'],
   },
   {
-    id:'product-review', label:'Product Review', icon:'⭐', cvr:'medium',
-    desc:'Review komprehensif, jujur, pros & cons, credible.',
-    hookStyle:'Teaser hasil/kesimpulan di awal, detail di tengah',
-    structure:['Teaser kesimpulan', 'Unboxing/first look', 'Test & detail', 'Pros & Cons jujur', 'Verdict + CTA'],
-    idealDuration:60,
+    id: 'tutorial',
+    label: 'Tutorial / How-to',
+    icon: '🛠️',
+    desc: 'Ajarkan sesuatu, sisipkan produk sebagai tools wajib',
+    framework: 'Educational + Direct Response',
+    structure: [
+      'Hook: "Cara [hasil] dalam [waktu]"',
+      'Step 1: langkah pertama jelas',
+      'Step 2: langkah dengan produk',
+      'Hasil akhir: tunjukkan output',
+      'CTA: produk yang dipakai ada di keranjang',
+    ],
+    idealDuration: 45,
+    cvr: 'high',
+    bestFor: ['beauty', 'food', 'skincare', 'general'],
   },
   {
-    id:'comparison', label:'Comparison', icon:'🔄', cvr:'high',
-    desc:'Bandingkan produk ini vs alternatif. Positioning yang kuat.',
-    hookStyle:'Pertanyaan "mana yang lebih bagus?" atau "jangan salah pilih"',
-    structure:['Hook pertanyaan pilihan', 'Kompetitor A (alternatif umum)', 'Produk kita (keunggulan)', 'Perbandingan langsung', 'Rekomendasi tegas + CTA'],
-    idealDuration:45,
+    id: 'before-after',
+    label: 'Before-After',
+    icon: '✨',
+    badge: 'VIRAL',
+    desc: 'Transformasi visual nyata — bukti hasil yang sulit ditolak',
+    framework: 'Before-After-Bridge',
+    structure: [
+      'Before: kondisi awal (pain point) tanpa sensor',
+      'Proses: pemakaian produk dipercepat',
+      'After: hasil nyata side-by-side',
+      'Timeline: berapa lama hasilnya muncul',
+      'CTA: "Mau hasil sama? Beli di sini"',
+    ],
+    idealDuration: 30,
+    cvr: 'high',
+    bestFor: ['skincare', 'beauty', 'health', 'home'],
   },
   {
-    id:'affiliate', label:'Affiliate', icon:'🔗', cvr:'high', badge:'Affiliate',
-    desc:'Personal branding affiliate. Kode diskon, genuine recommendation.',
-    hookStyle:'Personal recommendation + kode diskon eksklusif',
-    structure:['Perkenalan personal', 'Kenapa saya rekomendasikan', 'Benefit utama', 'Sosial proof', 'Kode diskon + CTA link'],
-    idealDuration:45,
+    id: 'affiliate',
+    label: 'Affiliate Push',
+    icon: '💰',
+    badge: 'KODE',
+    desc: 'Hard-sell affiliate dengan kode promo & urgensi maksimal',
+    framework: 'Direct Response Marketing',
+    structure: [
+      'Hook: penawaran / diskon besar di depan',
+      'Highlight: benefit utama paling kuat',
+      'Social proof: rating + jumlah terjual',
+      'Urgency: stok / promo terbatas',
+      'CTA: pakai kode affiliate + keranjang kuning',
+    ],
+    idealDuration: 30,
+    cvr: 'high',
+    bestFor: ['general', 'gadget', 'fashion', 'food'],
   },
   {
-    id:'problem-solution', label:'Problem Solution', icon:'💡', cvr:'high',
-    desc:'Identifikasi pain point lalu tawarkan solusi spesifik & produk.',
-    hookStyle:'"Kalau kamu juga ngerasain ini..." atau "Masalah ini akhirnya ada solusinya"',
-    structure:['Identifikasi problem relatable', 'Empati + perkuat pain', 'Produk sebagai solusi', 'Proof / hasil nyata', 'CTA urgency'],
-    idealDuration:45,
+    id: 'live-promo',
+    label: 'Live Promo',
+    icon: '🔴',
+    desc: 'Teaser untuk narik penonton ke sesi LIVE selling',
+    framework: 'AIDA + Urgency',
+    structure: [
+      'Hook: "LIVE malam ini jam [x]!"',
+      'Bocoran: produk + harga spesial live',
+      'Benefit eksklusif: bonus khusus penonton live',
+      'Urgency: flash sale jumlah terbatas',
+      'CTA: follow + nyalakan reminder LIVE',
+    ],
+    idealDuration: 15,
+    cvr: 'medium',
+    bestFor: ['fashion', 'beauty', 'general', 'hijab'],
   },
   {
-    id:'before-after', label:'Before & After', icon:'✨', cvr:'high', badge:'Viral',
-    desc:'Transformasi visual yang powerful. Before state vs after pakai produk.',
-    hookStyle:'"Sebelum kamu tahu ini..." atau transformasi visual langsung',
-    structure:['Before state (problem yang terlihat)', 'Transisi ke after', 'Reveal produk', 'Proses / cara pakai singkat', 'CTA + proof'],
-    idealDuration:30,
+    id: 'comparison',
+    label: 'Comparison / Versus',
+    icon: '⚖️',
+    desc: 'Bandingkan dengan alternatif lain, posisikan produk sebagai pemenang',
+    framework: 'PAS + Direct Response',
+    structure: [
+      'Hook: "Mahal vs Murah? Cek dulu"',
+      'Produk A (kompetitor): tunjukkan kekurangan',
+      'Produk B (kita): tunjukkan kelebihan',
+      'Verdict: pemenang jelas + alasan',
+      'CTA: pilih yang worth it, link di bawah',
+    ],
+    idealDuration: 45,
+    cvr: 'medium',
+    bestFor: ['gadget', 'home', 'skincare', 'general'],
   },
   {
-    id:'tutorial', label:'Tutorial / Demo', icon:'🎯', cvr:'medium',
-    desc:'Step-by-step cara pakai produk. Edukasi + konversi.',
-    hookStyle:'"Cara benar pakai..." atau "Banyak yang tidak tahu cara ini..."',
-    structure:['Hook — cara yang benar', 'Persiapan / bahan', 'Step 1-3 tutorial', 'Hasil akhir', 'CTA beli'],
-    idealDuration:60,
+    id: 'trending-sound',
+    label: 'Trending Sound',
+    icon: '🎵',
+    badge: 'FYP',
+    desc: 'Format pendek nempel sound viral — engineered buat masuk FYP',
+    framework: '4U (Useful, Urgent, Unique, Ultra-specific)',
+    structure: [
+      'Hook visual sinkron dengan beat sound',
+      'Transisi cepat ke produk (cut on beat)',
+      'Punchline / twist tak terduga',
+      'Show benefit produk singkat',
+      'CTA singkat + perkuat di caption',
+    ],
+    idealDuration: 15,
+    cvr: 'medium',
+    bestFor: ['fashion', 'beauty', 'food', 'general'],
   },
   {
-    id:'unboxing', label:'Unboxing', icon:'📦', cvr:'medium',
-    desc:'Unboxing + first impression autentik. Build excitement & trust.',
-    hookStyle:'"Akhirnya datang!" atau "Ini yang semua orang tunggu"',
-    structure:['Hype / anticipation', 'Unbox packaging', 'First look produk', 'Detail & kualitas', 'Kesimpulan + CTA'],
-    idealDuration:60,
+    id: 'flash-sale',
+    label: 'Flash Sale',
+    icon: '⚡',
+    badge: 'URGENSI',
+    desc: 'Dorong checkout instan dengan diskon & countdown',
+    framework: 'Direct Response + Scarcity',
+    structure: [
+      'Hook: "Cuma hari ini!"',
+      'Harga coret → harga promo (visual jelas)',
+      'Benefit + bonus tambahan',
+      'Countdown / stok menipis',
+      'CTA: checkout sekarang sebelum kehabisan',
+    ],
+    idealDuration: 15,
+    cvr: 'high',
+    bestFor: ['general', 'fashion', 'gadget', 'food'],
   },
   {
-    id:'testimonial', label:'Testimonial', icon:'💬', cvr:'high',
-    desc:'Cerita pengalaman nyata yang emotional dan relatable.',
-    hookStyle:'"Jujur, awalnya saya juga ragu..."',
-    structure:['Situasi awal & keraguan', 'Alasan coba', 'Proses penggunaan', 'Hasil yang dirasakan', 'Rekomendasi tulus + CTA'],
-    idealDuration:45,
+    id: 'educational',
+    label: 'Edukasi / Tips',
+    icon: '🧠',
+    desc: 'Konten value "X kesalahan / X tips" — bangun trust sambil jualan',
+    framework: 'Educational + Soft Selling',
+    structure: [
+      'Hook: "3 kesalahan saat [topik]"',
+      'Tip 1: insight cepat',
+      'Tip 2: selipkan produk sebagai solusi',
+      'Tip 3: penutup value',
+      'CTA: pakai produk yang tepat, cek keranjang',
+    ],
+    idealDuration: 45,
+    cvr: 'medium',
+    bestFor: ['skincare', 'health', 'baby', 'home'],
   },
 ]
 
-// ── Hook templates per niche ──────────────────────────────────
-export const VIRAL_HOOKS: Record<string, string[]> = {
-  general: [
-    'Baru tahu ternyata {produk} bisa...',
-    'Jangan beli sebelum tahu ini tentang {produk}',
-    'Produk ini lagi dicari banyak orang, ini alasannya',
-    'Awalnya saya kira biasa aja, tapi ternyata...',
-    'Kenapa banyak orang menyesal baru tahu {produk} ini?',
-    'Saya coba {produk} viral ini selama 7 hari. Hasilnya?',
-    'Kalau budget kamu di bawah {harga}, wajib lihat ini',
-    'POV: Kamu akhirnya nemuin {produk} yang beneran works',
-    'Rating {rating} bintang bukan hoaks, ini buktinya',
-    'Ini bukan iklan. Saya beneran suka banget sama {produk}',
-  ],
-  fashion: [
-    'OOTD goals dengan {produk} di bawah {harga}?',
-    'Outfit ini auto dapat banyak pujian karena {produk}',
-    'Brand lokal tapi kualitasnya gak kalah sama import',
-    'Kalau kamu suka style {style}, wajib cek {produk}',
-    'Fashion haul yang bikin dompet aman tapi tetap stylish',
-  ],
-  beauty: [
-    'Kulit glowing dalam {days} hari? Saya sudah buktikan',
-    'Skincare routine yang mengubah kulit saya 100%',
-    '{produk} ini literally game changer untuk kulit {jenis}',
-    'Kenapa saya hapus semua skincare lama setelah ketemu {produk}',
-    'Beauty secret yang akhirnya saya share: {produk}',
-  ],
-  skincare: [
-    'Dari kulit {masalah} ke glowing dalam {days} hari',
-    'Dermatologis juga rekomendasikan {produk} untuk {masalah}',
-    'Formula {bahan} ini beneran work untuk kulit orang Asia',
-    'Saya sudah buang {jumlah} produk mahal sebelum nemuin ini',
-    '{produk} = satu produk, {jumlah} manfaat. Worth it banget',
-  ],
-  food: [
-    '{produk} ini bikin ketagihan, wajib coba!',
-    'Rasa autentik yang langsung bikin kangen kampung',
-    'Cemilan sehat tapi rasanya gak bohong',
-    'Snack viral ini akhirnya saya coba, dan wow...',
-    'Bahan alami + rasa premium = {produk}',
-  ],
-  gadget: [
-    'Specs dewa tapi harga {harga}? Real talk tentang {produk}',
-    'Review jujur {produk} setelah {days} hari pemakaian',
-    '{produk} vs {kompetitor}: mana yang lebih worth it?',
-    'Setup impian akhirnya terwujud dengan {produk}',
-    'Kenapa {produk} jadi daily driver saya sekarang',
-  ],
-  health: [
-    'Kesehatan adalah investasi. {produk} adalah buktinya',
-    'Dokter juga rekomendasikan {produk} untuk {masalah}',
-    'Dari {masalah} ke sehat dalam {days} hari',
-    'Natural, aman, dan beneran work: {produk}',
-    'Herbal solution yang sudah saya pakai selama {period}',
-  ],
-  home: [
-    'Room makeover di bawah {harga} dengan {produk}!',
-    'Rumah jadi 10x lebih aesthetic dengan {produk}',
-    'Home decor yang bikin tamu selalu nanya beli dimana',
-    'Aesthetic + fungsional = {produk} yang wajib dimiliki',
-    'Upgrade rumah tanpa renovasi: {produk} jawabannya',
-  ],
-  baby: [
-    'Sebagai ortu, ini yang paling penting: {produk} aman untuk si kecil',
-    'Baby-approved! Si kecil langsung suka sama {produk}',
-    'Dermatologically tested untuk kulit sensitif bayi',
-    'Parenting jadi lebih mudah dengan {produk}',
-    'Mommy-recommended: {produk} yang sudah saya buktikan',
-  ],
-  hijab: [
-    'Modest fashion goals? {produk} jawabannya!',
-    'Syar\'i, stylish, dan nyaman seharian: {produk}',
-    'Hijab OOTD yang auto dapat compliment',
-    'Bahan adem + tidak tembus = {produk} yang wajib dicoba',
-    'Tampil anggun maksimal dengan {produk}',
-  ],
-}
-
-// ── Scene visual sequence ────────────────────────────────────
-export const VISUAL_SEQUENCES: Record<ScriptVariantId, string[]> = {
-  'soft-selling':    ['Opening relatable/tips overlay', 'Problem visual + text', 'Solusi & edukasi footage', 'Produk introduction', 'Hasil + testimonial', 'CTA overlay'],
-  'hard-selling':    ['Hook text + harga besar', 'Produk close-up', 'Benefit list fast-cut', 'Urgency countdown/sticker', 'CTA button overlay'],
-  'storytelling':    ['Situasi before — emosional', 'Problem montage', 'Discovery moment', 'Transformation footage', 'After reveal + produk', 'CTA emosional'],
-  'ugc-review':      ['Selfie casual intro', 'Produk unboxing', 'Real usage footage', 'Result close-up', 'Reaction shot', 'CTA kasual'],
-  'product-review':  ['Teaser hasil di awal', 'Unboxing packaging', 'Detail produk', 'Demo/test footage', 'Pros cons text', 'Verdict + CTA'],
-  'comparison':      ['Hook visual pilihan A vs B', 'Product A footage', 'Product B (ours) footage', 'Side-by-side comparison', 'Winner reveal', 'CTA'],
-  'affiliate':       ['Personal intro selfie', 'Why I use this', 'Product usage', 'Results close-up', 'Code reveal overlay', 'Swipe up CTA'],
-  'problem-solution':['Problem intro (relatable)', 'Pain amplification', 'Transition to solution', 'Product demo', 'Result proof', 'Urgency CTA'],
-  'before-after':    ['Before footage/photo', 'Suspense transition', 'After reveal', 'Product close-up', 'Usage quick tip', 'CTA overlay'],
-  'tutorial':        ['Hook + end result tease', 'Ingredients/prep', 'Step 1 footage', 'Step 2-3 fast-cut', 'Final result', 'Buy link CTA'],
-  'unboxing':        ['Packaging arrival', 'Unbox reveal', 'First look all items', 'Detail close-ups', 'Quick usage test', 'Verdict + CTA'],
-  'testimonial':     ['Intro + keraguan awal', 'Decision to try', 'Usage experience', 'Result reveal', 'Emotional ending', 'CTA recommendation'],
-}
-
-// ── Platform config ───────────────────────────────────────────
-export interface PlatformConfig {
-  id:     PlatformId
-  label:  string
-  icon:   string
-  ratio:  string
-  size:   string
-  maxDur: number
-  desc:   string
+// ══════════════════════════════════════════════════════════════
+// PLATFORMS
+// ══════════════════════════════════════════════════════════════
+export interface Platform {
+  id: PlatformId
+  label: string
+  icon: string
   hashtagLimit: number
+  captionLimit: number
+  apiSupported: boolean       // ada API publish resmi?
+  apiNote: string
 }
 
-export const PLATFORMS: PlatformConfig[] = [
-  { id:'tiktok',       label:'TikTok',         icon:'🎵', ratio:'9:16', size:'1080×1920', maxDur:180, desc:'FYP + For You Page viral', hashtagLimit:10 },
-  { id:'reels',        label:'Instagram Reels', icon:'📸', ratio:'9:16', size:'1080×1920', maxDur:90,  desc:'IG Explore + Reels Feed',  hashtagLimit:30 },
-  { id:'shorts',       label:'YouTube Shorts',  icon:'▶️', ratio:'9:16', size:'1080×1920', maxDur:60,  desc:'YouTube Shorts discovery', hashtagLimit:15 },
-  { id:'tiktok-shop',  label:'TikTok Shop',     icon:'🛒', ratio:'9:16', size:'1080×1920', maxDur:60,  desc:'Product video + shoppable',hashtagLimit:10 },
-  { id:'shopee-video', label:'Shopee Video',    icon:'🛍️', ratio:'9:16', size:'720×1280',  maxDur:60,  desc:'Native Shopee marketplace', hashtagLimit:5 },
+export const PLATFORMS: Platform[] = [
+  {
+    id: 'tiktok',
+    label: 'TikTok',
+    icon: '🎵',
+    hashtagLimit: 8,
+    captionLimit: 2200,
+    apiSupported: true,
+    apiNote: 'TikTok Content Posting API (perlu TikTok for Developers + OAuth)',
+  },
+  {
+    id: 'reels',
+    label: 'Reels',
+    icon: '📸',
+    hashtagLimit: 15,
+    captionLimit: 2200,
+    apiSupported: true,
+    apiNote: 'Instagram Graph API (perlu akun Business/Creator)',
+  },
+  {
+    id: 'shorts',
+    label: 'Shorts',
+    icon: '▶️',
+    hashtagLimit: 12,
+    captionLimit: 1500,
+    apiSupported: true,
+    apiNote: 'YouTube Data API v3 (upload + shorts)',
+  },
 ]
 
-// ── Duration options ──────────────────────────────────────────
-export const DURATION_OPTIONS = [
-  { value:15  as DurationSec, label:'15 detik', icon:'⚡', desc:'Hook-only. Ultra viral, 1 benefit.' },
-  { value:30  as DurationSec, label:'30 detik', icon:'🎯', desc:'Hook + benefit + CTA. TikTok optimal.' },
-  { value:45  as DurationSec, label:'45 detik', icon:'🎬', desc:'Full UGC format. Platform-recommended.' },
-  { value:60  as DurationSec, label:'60 detik', icon:'📖', desc:'Review lengkap. IG & YouTube Shorts.' },
-  { value:90  as DurationSec, label:'90 detik', icon:'🌟', desc:'Deep storytelling. Emotional arc.' },
+// ══════════════════════════════════════════════════════════════
+// DURATION
+// ══════════════════════════════════════════════════════════════
+export interface DurationOption {
+  value: DurationSec
+  label: string
+  icon: string
+}
+
+export const DURATION_OPTIONS: DurationOption[] = [
+  { value: 15, label: '15 detik', icon: '⚡' },
+  { value: 30, label: '30 detik', icon: '🎯' },
+  { value: 45, label: '45 detik', icon: '📖' },
+  { value: 60, label: '60 detik', icon: '🎬' },
 ]
 
-// ── Hashtag database per niche ────────────────────────────────
-export const HASHTAG_DB: Record<NicheId, { trending: string[]; niche: string[]; general: string[] }> = {
-  fashion: {
-    trending: ['#OOTD','#FashionTikTok','#StyleInspo','#OutfitIdeas','#FashionHaul'],
-    niche:    ['#BajuKece','#FashionLokal','#StyleIndonesia','#OOTDIndonesia','#FashionWanita'],
-    general:  ['#TikTokFashion','#Lookbook','#FashionBlogger','#Trendy','#StyleTips'],
-  },
-  beauty: {
-    trending: ['#BeautyTikTok','#MakeupTutorial','#GlowUp','#BeautyHacks','#MakeupLovers'],
-    niche:    ['#BeautyLokal','#MakeupIndonesia','#CantikAlami','#Skincare','#BeautyRoutine'],
-    general:  ['#MakeupTips','#BeautyInfluencer','#GRWM','#NoFilter','#NaturalBeauty'],
-  },
-  skincare: {
-    trending: ['#SkincareRoutine','#GlowingSkin','#SkincareObsessed','#SkincareTips','#ClearSkin'],
-    niche:    ['#SkincareLokal','#KuliSehat','#GlowingAlami','#SkincareIndonesia','#HydrationSkincare'],
-    general:  ['#Moisturizer','#Sunscreen','#Serum','#SkincareAddict','#HealthySkin'],
-  },
-  food: {
-    trending: ['#FoodTikTok','#FoodLovers','#Kuliner','#MakanEnak','#FoodReview'],
-    niche:    ['#MakananLokal','#KulinerIndonesia','#SnackViralll','#JajananEnak','#HomeMade'],
-    general:  ['#FoodPhotography','#Foodie','#Delicious','#MustTry','#FoodRecommendation'],
-  },
-  gadget: {
-    trending: ['#TechTikTok','#GadgetLovers','#TechReview','#NewGadget','#TechUnboxing'],
-    niche:    ['#GadgetIndonesia','#ReviewJujur','#TechLokal','#GadgetMurah','#WorthIt'],
-    general:  ['#Technology','#Innovation','#TechNews','#Unboxing','#ReviewProduct'],
-  },
-  health: {
-    trending: ['#HealthTips','#Wellness','#HealthyLifestyle','#Herbal','#NaturalHealth'],
-    niche:    ['#HerbalIndonesia','#JamuLokal','#KesehatanAlami','#HidupSehat','#SuplemenAlami'],
-    general:  ['#HealthyLiving','#NaturalRemedy','#WellnessJourney','#TipsKesehatan','#Supplement'],
-  },
-  home: {
-    trending: ['#HomeDecor','#InteriorDesign','#HomeTour','#RoomMakeover','#HouseGoals'],
-    niche:    ['#DekorasiRumah','#RumahMinimalis','#HomeIndonesia','#InteriorLokal','#HomeInspo'],
-    general:  ['#HomeDesign','#CozyHome','#HomeStyling','#DIYDecor','#LivingRoom'],
-  },
-  baby: {
-    trending: ['#BabyTikTok','#ParentingTips','#BabyProducts','#NewMom','#BabyReview'],
-    niche:    ['#MomIndonesia','#BayiIndonesia','#ProdukBayi','#ParentingIndonesia','#MomLife'],
-    general:  ['#Parenting','#BabyShop','#Mompreneur','#BabyCare','#NewParent'],
-  },
-  hijab: {
-    trending: ['#HijabStyle','#HijabFashion','#OOTDHijab','#ModestFashion','#HijabLook'],
-    niche:    ['#HijabIndonesia','#HijabLokal','#BusanaMuslim','#GamisKece','#HijabOOTD'],
-    general:  ['#Muslimah','#HijabInfluencer','#ModestWear','#HijabTrend','#IslamicFashion'],
-  },
-  general: {
-    trending: ['#TikTokViral','#FYP','#ForYouPage','#Trending','#Viral'],
-    niche:    ['#ProdukLokal','#BuatanIndonesia','#ReviewJujur','#Recommended','#MustBuy'],
-    general:  ['#Seller','#ShopNow','#OnlineShop','#BelanjaMurah','#TikTokShop'],
-  },
+// ══════════════════════════════════════════════════════════════
+// VISUAL SEQUENCES — shot list per jenis script (5 scene)
+// ══════════════════════════════════════════════════════════════
+export const VISUAL_SEQUENCES: Record<ScriptVariantId, string[]> = {
+  'ugc-review': [
+    'Close-up wajah/ekspresi sambil ngomong langsung ke kamera (handheld, natural)',
+    'Cutaway ke produk di tangan, putar perlihatkan kemasan',
+    'B-roll produk dipakai / diaplikasikan secara nyata',
+    'Split-screen atau cut before-after hasil',
+    'Pointing ke keranjang kuning + teks CTA di layar',
+  ],
+  pas: [
+    'Visual masalah (kusam, berantakan, ribet) dengan ekspresi kesal',
+    'Zoom-in masalah + teks overlay "relate gak?"',
+    'Reveal produk dengan transisi cepat (problem solved)',
+    'Demo produk menyelesaikan masalah',
+    'Teks rating/terjual + CTA arrow ke keranjang',
+  ],
+  storytelling: [
+    'Talking head intim, lighting hangat, mulai cerita',
+    'Foto/klip "masa sulit" (bisa stok atau reenactment)',
+    'Momen reveal produk dengan musik naik',
+    'Montage transformasi / hasil sekarang',
+    'Senyum ke kamera + CTA lembut + link',
+  ],
+  unboxing: [
+    'Paket utuh di meja, tangan mulai buka (ASMR friendly)',
+    'Tarik isi keluar, perlihatkan layer packaging',
+    'Hold produk, putar 360°, sorot detail',
+    'Tes cepat fungsi utama produk',
+    'Produk + teks harga/diskon + CTA keranjang',
+  ],
+  tutorial: [
+    'Hook teks besar "Cara [X] dalam [Y] detik"',
+    'Top-down / POV step pertama',
+    'Step pakai produk (highlight produk di frame)',
+    'Reveal hasil akhir memuaskan',
+    'Tunjuk produk + teks "tools ada di keranjang"',
+  ],
+  'before-after': [
+    'Shot "BEFORE" jujur, teks label di pojok',
+    'Transisi swipe/clap ke proses pemakaian',
+    'Time-lapse / cut cepat proses',
+    'Shot "AFTER" angle sama, side-by-side',
+    'Teks timeline "X hari" + CTA beli',
+  ],
+  affiliate: [
+    'Hook diskon besar teks layar penuh',
+    'Produk hero shot dengan lighting clean',
+    'Overlay screenshot rating & jumlah terjual',
+    'Teks "stok terbatas" + animasi urgensi',
+    'Zoom keranjang kuning + kode promo besar',
+  ],
+  'live-promo': [
+    'Teks "LIVE jam [X]" full screen energik',
+    'Teaser produk ditutup sebagian (bikin penasaran)',
+    'Flash harga coret → harga live',
+    'Hitung mundur / "siapin keranjang"',
+    'CTA follow + ikon reminder berkedip',
+  ],
+  comparison: [
+    'Split screen "A vs B" teks jelas',
+    'Sorot kekurangan produk A (netral)',
+    'Sorot kelebihan produk kita (B)',
+    'Checklist perbandingan muncul satu-satu',
+    'Tunjuk pemenang + CTA ke produk B',
+  ],
+  'trending-sound': [
+    'Frame 1 sinkron beat drop sound viral',
+    'Hard cut ke produk tepat di ketukan',
+    'Transisi/twist gerakan cepat',
+    'Quick benefit shot (1-2 detik)',
+    'Freeze + teks CTA, perkuat di caption',
+  ],
+  'flash-sale': [
+    'Teks "FLASH SALE HARI INI" merah/kuning kontras',
+    'Harga coret besar → harga promo animasi',
+    'Produk + bonus ditata rapi',
+    'Countdown timer / "stok tinggal sedikit"',
+    'Tombol checkout + panah ke keranjang',
+  ],
+  educational: [
+    'Hook teks "3 kesalahan saat [topik]"',
+    'Poin 1 dengan visual contoh salah',
+    'Poin 2 + masuk produk sebagai solusi',
+    'Poin 3 penutup value cepat',
+    'CTA halus + produk di keranjang',
+  ],
 }
 
-// ── Prompt builder for script generation ─────────────────────
-export interface BuildScriptPromptInput {
-  variantId:      ScriptVariantId
-  platform:       PlatformId
-  duration:       DurationSec
-  productName:    string
-  productPrice:   string
-  targetMarket:   string
-  mainBenefit:    string
-  painPoint:      string
-  socialProof:    string
-  niche:          NicheId
-  language:       'indonesia' | 'english'
-  tone:           string
-  affiliateCode?: string
+// ══════════════════════════════════════════════════════════════
+// INTEGRASI TIKTOK API
+// ──────────────────────────────────────────────────────────────
+// Preset di bawah ini menyiapkan METADATA siap-publish ke
+// TikTok Content Posting API. Untuk benar-benar posting otomatis,
+// dibutuhkan: app di TikTok for Developers, scope video.publish,
+// dan alur OAuth user (access_token). Lihat buildTikTokPostPayload().
+// ══════════════════════════════════════════════════════════════
+
+export type TikTokPrivacy =
+  | 'PUBLIC_TO_EVERYONE'
+  | 'MUTUAL_FOLLOW_FRIENDS'
+  | 'FOLLOWER_OF_CREATOR'
+  | 'SELF_ONLY'
+
+export interface TikTokPostPreset {
+  id: string
+  label: string
+  icon: string
+  privacyLevel: TikTokPrivacy
+  discloseCommercial: boolean   // disclose_commercial_content
+  brandOrganic: boolean         // brand_organic_toggle (brand kamu sendiri)
+  brandedContent: boolean       // branded_content_toggle (paid partnership)
+  disableComment: boolean
+  disableDuet: boolean
+  disableStitch: boolean
+  desc: string
 }
 
-export function buildScriptPrompt(input: BuildScriptPromptInput): string {
-  const variant  = SCRIPT_VARIANTS.find(v => v.id === input.variantId)!
-  const platform = PLATFORMS.find(p => p.id === input.platform)!
+export const TIKTOK_POST_PRESETS: TikTokPostPreset[] = [
+  {
+    id: 'organic',
+    label: 'Organik (Brand Sendiri)',
+    icon: '🌱',
+    privacyLevel: 'PUBLIC_TO_EVERYONE',
+    discloseCommercial: true,
+    brandOrganic: true,
+    brandedContent: false,
+    disableComment: false,
+    disableDuet: false,
+    disableStitch: false,
+    desc: 'Untuk seller yang promosi produk sendiri. Aktifkan label "Promosikan produk sendiri".',
+  },
+  {
+    id: 'affiliate',
+    label: 'Affiliate / Paid Partnership',
+    icon: '🤝',
+    privacyLevel: 'PUBLIC_TO_EVERYONE',
+    discloseCommercial: true,
+    brandOrganic: false,
+    brandedContent: true,
+    disableComment: false,
+    disableDuet: false,
+    disableStitch: false,
+    desc: 'Untuk affiliate / endorse. Wajib label "Konten bermerek (paid partnership)".',
+  },
+  {
+    id: 'engagement',
+    label: 'Maksimal Engagement',
+    icon: '🔥',
+    privacyLevel: 'PUBLIC_TO_EVERYONE',
+    discloseCommercial: false,
+    brandOrganic: false,
+    brandedContent: false,
+    disableComment: false,
+    disableDuet: false,
+    disableStitch: false,
+    desc: 'Buka semua interaksi (comment, duet, stitch) buat dorong reach FYP.',
+  },
+  {
+    id: 'draft',
+    label: 'Privat (Cek Dulu)',
+    icon: '🔒',
+    privacyLevel: 'SELF_ONLY',
+    discloseCommercial: false,
+    brandOrganic: false,
+    brandedContent: false,
+    disableComment: true,
+    disableDuet: true,
+    disableStitch: true,
+    desc: 'Upload privat untuk review internal sebelum dipublik.',
+  },
+]
 
-  return [
-    `You are an expert TikTok/Reels viral content creator and copywriter for Indonesian e-commerce.`,
-    `Create a ${input.duration}-second ${variant.label} video script for ${platform.label} (${platform.ratio} format).`,
-    `Language: ${input.language === 'indonesia' ? 'bahasa Indonesia natural, conversational' : 'English'}.`,
-    `Tone: ${input.tone}.`,
-    `\nPRODUCT INFO:`,
-    `- Name: ${input.productName}`,
-    `- Price: ${input.productPrice || 'competitively priced'}`,
-    `- Main benefit: ${input.mainBenefit}`,
-    `- Pain point solved: ${input.painPoint}`,
-    `- Target market: ${input.targetMarket}`,
-    input.socialProof ? `- Social proof: ${input.socialProof}` : '',
-    input.affiliateCode ? `- Affiliate code: ${input.affiliateCode} (include in CTA)` : '',
-    `\nSCRIPT STRUCTURE (${variant.label}):`,
-    variant.structure.map((s, i) => `${i+1}. ${s}`).join('\n'),
-    `\nHOOK STYLE: ${variant.hookStyle}`,
-    `\nOUTPUT FORMAT — Return ONLY these 5 sections, no extra text:`,
-    `[HOOK] (first 3 seconds — must stop the scroll)`,
-    `[SCRIPT] (full ${input.duration}s spoken script, natural conversational, no stage directions)`,
-    `[CAPTION] (${platform.label} caption with emojis, max 150 chars)`,
-    `[CTA] (specific call-to-action for ${platform.label})`,
-    `[VISUAL_NOTES] (3-5 bullet points: what to show on screen each section)`,
-    `\nRules: Sound like a REAL person, NOT an advertisement. Natural, engaging, conversion-focused.`,
-    platform.id === 'tiktok-shop' ? 'Include shopping link/cart mention naturally in CTA.' : '',
-  ].filter(Boolean).join('\n')
+// ── Kategori trending sound ───────────────────────────────────
+// Data sound viral REAL-TIME sebaiknya ditarik dari TikTok Creative
+// Center / Display API. Ini panduan tipe sound per gaya konten.
+export interface TrendingSoundType {
+  id: string
+  label: string
+  icon: string
+  useFor: ScriptVariantId[]
+  tip: string
 }
 
-// ── A/B Hook generator ────────────────────────────────────────
-export function buildHookVariants(productName: string, niche: NicheId, price: string): string[] {
-  const hooks = VIRAL_HOOKS[niche] ?? VIRAL_HOOKS.general
-  return hooks.slice(0, 6).map(h =>
-    h.replace(/\{produk\}/g, productName)
-     .replace(/\{harga\}/g, price)
-     .replace(/\{days\}/g, String(Math.floor(Math.random() * 14) + 7))
-     .replace(/\{rating\}/g, '4.9')
-     .replace(/\{period\}/g, '6 bulan')
-     .replace(/\{jumlah\}/g, '5')
-     .replace(/\{masalah\}/g, 'bermasalah')
-     .replace(/\{style\}/g, 'streetwear')
-     .replace(/\{bahan\}/g, 'niacinamide')
-     .replace(/\{kompetitor\}/g, 'produk mahal lainnya')
-     .replace(/\{jenis\}/g, 'normal-oily')
-  )
+export const TIKTOK_TRENDING_SOUND_TYPES: TrendingSoundType[] = [
+  {
+    id: 'upbeat-trending',
+    label: 'Upbeat / Trending Beat',
+    icon: '🎶',
+    useFor: ['trending-sound', 'unboxing', 'flash-sale'],
+    tip: 'Pakai sound yang lagi naik (panah ke atas di Creative Center). Sinkronkan cut ke beat drop.',
+  },
+  {
+    id: 'voiceover-asmr',
+    label: 'Voiceover + ASMR',
+    icon: '🎙️',
+    useFor: ['ugc-review', 'tutorial', 'educational'],
+    tip: 'Suara asli kamu lebih dipercaya. Tambah ASMR halus untuk unboxing/tekstur.',
+  },
+  {
+    id: 'emotional',
+    label: 'Emotional / Cinematic',
+    icon: '🎻',
+    useFor: ['storytelling', 'before-after'],
+    tip: 'Bangun emosi di klimaks transformasi. Naikkan volume saat reveal "after".',
+  },
+  {
+    id: 'hype-urgency',
+    label: 'Hype / Urgency',
+    icon: '📣',
+    useFor: ['live-promo', 'flash-sale', 'affiliate'],
+    tip: 'Tempo cepat untuk dorong rasa "buruan checkout". Cocok untuk countdown.',
+  },
+]
+
+// ── Strategi hashtag ──────────────────────────────────────────
+export const HASHTAG_STRATEGY = {
+  formula: '3 Trending + 3 Niche + 2 General + 2 Produk',
+  rules: [
+    'Jangan spam hashtag — TikTok lebih suka 3-8 hashtag relevan.',
+    'Selalu campur 1-2 hashtag trending dengan hashtag niche spesifik.',
+    'Hashtag produk/brand memudahkan tracking & retargeting.',
+    'Cek volume & tren hashtag di TikTok Creative Center sebelum dipakai.',
+  ],
+} as const
+
+// ── Builder payload Content Posting API ───────────────────────
+export interface BuildPayloadInput {
+  platform: PlatformId
+  caption: string
+  hashtags: string[]
+  privacyLevel?: TikTokPrivacy
+  postPreset?: TikTokPostPreset
+  videoUrl?: string          // hasil render (mis. dari Cloudflare R2)
+  suggestedSound?: string
 }
 
-// ── Generate hashtags ─────────────────────────────────────────
-export function buildHashtags(niche: NicheId, platform: PlatformId, productName: string): {
-  trending: string[]; niche: string[]; general: string[]; product: string[]
-} {
-  const db  = HASHTAG_DB[niche] ?? HASHTAG_DB.general
-  const platCfg = PLATFORMS.find(p => p.id === platform)!
-  const productHash = productName.split(' ').slice(0,2).map(w => `#${w.replace(/[^a-zA-Z0-9]/g,'')}`).filter(h => h.length > 2)
-
-  return {
-    trending: db.trending.slice(0, 5),
-    niche:    db.niche.slice(0, 5),
-    general:  db.general.slice(0, 5),
-    product:  [...productHash, '#TikTokShop', '#Shopee'],
+export interface TikTokPublishPayload {
+  // Sesuai struktur TikTok Content Posting API (post_info + source_info)
+  post_info: {
+    title: string
+    privacy_level: TikTokPrivacy
+    disable_comment: boolean
+    disable_duet: boolean
+    disable_stitch: boolean
+    brand_content_toggle: boolean
+    brand_organic_toggle: boolean
+  }
+  source_info: {
+    source: 'PULL_FROM_URL' | 'FILE_UPLOAD'
+    video_url?: string
+  }
+  // _meta = bantuan internal app (BUKAN bagian payload resmi TikTok)
+  _meta: {
+    platform: PlatformId
+    hashtags: string[]
+    suggestedSound?: string
+    note: string
   }
 }
 
-// ── URL parser for product info extraction ────────────────────
-export function extractPlatformFromUrl(url: string): 'shopee' | 'tiktok-shop' | 'tokopedia' | 'unknown' {
-  if (url.includes('shopee.co.id') || url.includes('shp.ee')) return 'shopee'
-  if (url.includes('tiktok.com') || url.includes('shop.tiktok')) return 'tiktok-shop'
-  if (url.includes('tokopedia.com')) return 'tokopedia'
-  return 'unknown'
+/**
+ * Bangun payload metadata siap dikirim ke TikTok Content Posting API.
+ * Title = caption + hashtags (TikTok menggabung caption & hashtag di field title).
+ */
+export function buildTikTokPostPayload(input: BuildPayloadInput): TikTokPublishPayload {
+  const preset = input.postPreset
+  const platform = PLATFORMS.find((p) => p.id === input.platform) ?? PLATFORMS[0]
+
+  const tags = input.hashtags.slice(0, platform.hashtagLimit).join(' ')
+  const rawTitle = tags ? `${input.caption}\n\n${tags}` : input.caption
+  const title = rawTitle.slice(0, platform.captionLimit)
+
+  return {
+    post_info: {
+      title,
+      privacy_level: input.privacyLevel ?? preset?.privacyLevel ?? 'PUBLIC_TO_EVERYONE',
+      disable_comment: preset?.disableComment ?? false,
+      disable_duet: preset?.disableDuet ?? false,
+      disable_stitch: preset?.disableStitch ?? false,
+      brand_content_toggle: preset?.brandedContent ?? false,
+      brand_organic_toggle: preset?.brandOrganic ?? false,
+    },
+    source_info: {
+      source: input.videoUrl ? 'PULL_FROM_URL' : 'FILE_UPLOAD',
+      ...(input.videoUrl ? { video_url: input.videoUrl } : {}),
+    },
+    _meta: {
+      platform: input.platform,
+      hashtags: input.hashtags.slice(0, platform.hashtagLimit),
+      suggestedSound: input.suggestedSound,
+      note: platform.apiSupported
+        ? `${platform.apiNote}. Butuh access_token user (scope video.publish).`
+        : 'Platform ini belum mendukung auto-publish via API.',
+    },
+  }
 }

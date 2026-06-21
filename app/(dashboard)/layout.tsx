@@ -63,12 +63,13 @@ const NAV_CORE = [
 
 const NAV_STUDIO = [
   { href:'/studio',                  label:'AI Studio',          emoji:'🎨', phase:1 },
-  { href:'/content/image',           label:'AI Image Generator', emoji:'🖼️', phase:1, sub:true }, // ⚡ tambah
+  { href:'/content/new',           label:'AI Visual Marketing Engine', emoji:'🖼️', phase:1, sub:true }, // ⚡ tambah
   { href:'/studio/image/packshot',   label:'AI Packshot',        emoji:'📦', phase:1, sub:true },
   { href:'/studio/image/enhancer',   label:'Product Enhancer',   emoji:'✨', phase:1, sub:true },
   { href:'/studio/video/ugc',        label:'UGC Video',          emoji:'🎬', phase:1, sub:true },
   { href:'/studio/video/tiktok',     label:'TikTok Reels AI',    emoji:'🎵', phase:1, sub:true },
-  { href:'/studio/video/generator',  label:'AI Video Gen',       emoji:'🎥', phase:1, sub:true },
+  { href:'/studio/video/generator',  label:'AI Video Generator',       emoji:'🎥', phase:1, sub:true },
+  
 ]
 
 const NAV_ADS = [
@@ -105,7 +106,7 @@ const PHASE_BADGE: Record<number,string> = { 2:'P2', 3:'P3', 4:'P4' }
 const ROUTE_TITLE: Record<string,string> = {
   '/dashboard':                 '🏠 Home Dashboard',
   '/quick-tools':               '⚡ Quick Tools',
-  '/content/image':             '🖼️ AI Image Generator',
+  '/content/new':             '🖼️ AI Visual Marketing Engine',
   '/studio':                    '🎨 AI Studio',
   '/studio/image':              '📸 Generate Gambar',
   '/studio/image/packshot':     '📦 AI Packshot',
@@ -135,7 +136,7 @@ const ROUTE_TITLE: Record<string,string> = {
 // ── CMD actions (14 items + Admin Panel kalau superuser) ──────
 const CMD_ACTIONS = [
   { label:'Generate Caption AI',     href:'/quick-tools?tool=caption',  icon:'✍️', group:'AI Studio' },
-  { label:'AI Image Generator', href:'/content/image', icon:'🖼️', group:'AI Studio' },
+  { label:'AI Visual Marketing Engine', href:'/content/image', icon:'🖼️', group:'AI Studio' },
   { label:'AI Packshot',             href:'/studio/image/packshot',      icon:'📦', group:'AI Studio' },
   { label:'Product Enhancer AI',     href:'/studio/image/enhancer',      icon:'✨', group:'AI Studio' },
   { label:'UGC Video Generator',     href:'/studio/video/ugc',           icon:'🎭', group:'AI Studio' },

@@ -868,7 +868,7 @@ function ImageEngine() {
     <Sec id="fitur" bg={C.bgAlt}>
       <div style={W}>
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <SL text="AI Image Generator" />
+          <SL text="AI Visual Marketing Engine" />
           <h2 style={{ fontSize: 'clamp(20px,3.5vw,36px)', fontWeight: 800, color: C.ink, letterSpacing: '-0.03em', marginBottom: '8px' }}>7 Fitur AI Image</h2>
           <p style={{ fontSize: 'clamp(12px,1.8vw,14px)', color: C.inkMuted, maxWidth: '400px', margin: '0 auto' }}>Foto produk biasa → visual premium. Tanpa kamera, tanpa studio.</p>
         </div>
@@ -1509,7 +1509,7 @@ function Footer() {
             </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-            {[{ title: 'Produk', links: ['AI Image Generator', 'Quick Tools', 'Marketing Tools', 'Harga'] }, { title: 'Perusahaan', links: ['Tentang Kami', 'Privacy Policy', 'Terms of Service', 'Kontak'] }].map((col, i) => (
+            {[{ title: 'Produk', links: ['AI Visual Marketing Engine', 'Quick Tools', 'Marketing Tools', 'Harga'] }, { title: 'Perusahaan', links: ['Tentang Kami', 'Privacy Policy', 'Terms of Service', 'Kontak'] }].map((col, i) => (
               <div key={i}>
                 <div style={{ fontSize: '9px', fontWeight: 700, color: 'rgba(255,255,255,.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>{col.title}</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>

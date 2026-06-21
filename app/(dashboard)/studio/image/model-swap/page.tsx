@@ -32,31 +32,41 @@ import {
   type HairstyleId,
   type BodyTypeId,
 } from '@/lib/studio/model-swap-presets'
+import { ToolGate }        from '@/components/studio/ToolGate'
+import { ToolAccessBadge } from '@/components/studio/ToolAccessBadge'
 
-// ── Design tokens — dark studio ───────────────────────────────
+const FEATURE_ID = 'model-swap'   // ⚠️ samakan PERSIS dengan id di studio-menu-config.ts
+
+// ── Design tokens — amber-light bee palette ───────────────────
 const T = {
-  bg:       '#FAFAFA',
-  surface:  '#FAFAFA',
-  card:     '#FAFAFA',
-  border:   '#27272A',
-  borderHi: '#3F3F46',
-  accent:   '#10B981',   // emerald — distinct from tryon (purple)
-  accent2:  '#059669',
-  accentLo: '#10B98115',
-  accentMd: '#10B98130',
-  gold:     '#F59E0B',
-  goldLo:   '#F59E0B18',
+  bg:       '#FFFBF5',   // krem hangat (bg halaman)
+  surface:  '#FFFFFF',
+  card:     '#FFFFFF',
+  border:   '#F4E4C8',   // garis amber muda
+  borderHi: '#F5C451',
+  accent:   '#F59E0B',   // amber-500 (warna lebah)
+  accent2:  '#D97706',
+  accentLo: '#F59E0B14',
+  accentMd: '#F59E0B26',
+  gold:     '#B45309',   // amber-700 — judul, kontras di putih
+  goldLo:   '#F59E0B14',
   amber:    '#F59E0B',
-  blue:     '#3B82F6',
-  blueLo:   '#3B82F615',
-  red:      '#EF4444',
-  redLo:    '#EF444415',
-  orange:   '#F97316',
-  muted:    '#52525B',
-  dimmed:   '#71717A',
-  sub:      '#A1A1AA',
-  text:     '#E4E4E7',
-  white:    '#FAFAFA',
+  blue:     '#2563EB',  blueLo:  '#2563EB14',
+  green:    '#059669',  greenLo: '#05966914',
+  red:      '#DC2626',  redLo:   '#DC262614',
+  orange:   '#EA580C',
+  muted:    '#8A7A66',   // teks tersier
+  dimmed:   '#A99C88',
+  sub:      '#6B5B47',   // teks sekunder
+  text:     '#3A2A14',   // teks utama (cokelat gelap)
+  white:    '#FFFFFF',   // teks DI ATAS overlay gelap & handle slider — biarkan putih
+}
+
+// ── Step number badge (penanda alur langkah) ──────────────────
+function Step({ n }: { n: number }) {
+  return (
+    <span style={{ width:'19px', height:'19px', borderRadius:'50%', background:T.accent, color:'#fff', fontSize:'10px', fontWeight:800, display:'inline-flex', alignItems:'center', justifyContent:'center', flexShrink:0, boxShadow:`0 1px 4px ${T.accent}55` }}>{n}</span>
+  )
 }
 
 // ── Upload zone ───────────────────────────────────────────────
@@ -105,7 +115,7 @@ function UploadZone({
             <span style={{ fontSize:'9px', fontWeight:700, padding:'2px 6px', borderRadius:'4px', background:`${accent}20`, color:accent, textTransform:'uppercase', letterSpacing:'0.06em' }}>{badge}</span>
           )}
           {optional && (
-            <span style={{ fontSize:'9px', fontWeight:600, padding:'2px 6px', borderRadius:'4px', background:'rgba(255,255,255,.06)', color:T.muted }}>Opsional</span>
+            <span style={{ fontSize:'9px', fontWeight:600, padding:'2px 6px', borderRadius:'4px', background:T.goldLo, color:T.muted }}>Opsional</span>
           )}
         </div>
         {preview && (
@@ -125,7 +135,7 @@ function UploadZone({
         onDrop={handleDrop}
         style={{
           borderRadius:'12px', border:`1.5px dashed ${drag ? accent : preview ? `${accent}60` : T.border}`,
-          background: drag ? `${accent}08` : preview ? T.surface : 'rgba(255,255,255,.02)',
+          background: drag ? `${accent}08` : preview ? T.surface : T.bg,
           cursor: disabled ? 'not-allowed' : 'pointer', overflow:'hidden',
           transition:'all .18s', minHeight:'160px', position:'relative',
           opacity: disabled ? .5 : 1,
@@ -199,9 +209,9 @@ function BeforeAfterSlider({ before, after }: { before: string; after: string })
           <span style={{ fontSize:'10px' }}>⇄</span>
         </div>
       </div>
-      {/* Labels */}
+      {/* Labels — teks di atas overlay gelap, biarkan putih */}
       <div style={{ position:'absolute', top:'10px', left:'10px', padding:'3px 8px', borderRadius:'5px', background:'rgba(0,0,0,.6)', fontSize:'10px', fontWeight:700, color:T.white, backdropFilter:'blur(4px)' }}>Asli</div>
-      <div style={{ position:'absolute', top:'10px', right:'10px', padding:'3px 8px', borderRadius:'5px', background:`${T.accent}cc`, fontSize:'10px', fontWeight:700, color:T.white }}>Swap</div>
+      <div style={{ position:'absolute', top:'10px', right:'10px', padding:'3px 8px', borderRadius:'5px', background:`${T.accent}e6`, fontSize:'10px', fontWeight:700, color:T.white }}>Swap</div>
     </div>
   )
 }
@@ -251,14 +261,12 @@ export default function ModelSwapPage() {
     setShowBA(false)
     const url = URL.createObjectURL(f)
     setSourcePreview(url)
-    return () => URL.revokeObjectURL(url)
   }, [])
 
   const handleFaceRef = useCallback((f: File) => {
     setFaceRefFile(f)
     const url = URL.createObjectURL(f)
     setFaceRefPreview(url)
-    return () => URL.revokeObjectURL(url)
   }, [])
 
   const clearSource = useCallback(() => {
@@ -368,8 +376,8 @@ export default function ModelSwapPage() {
 
   // ──────────────────────────────────────────────────────────
   return (
-    <div style={{ minHeight:'100vh', background:T.bg, fontFamily:"'DM Sans',system-ui,sans-serif", color:T.text }}>
-
+    <ToolGate featureId={FEATURE_ID} theme="light">
+    <div style={{ minHeight:'100%', maxWidth:'100%', overflowX:'hidden', background:T.bg, fontFamily:"'DM Sans',system-ui,sans-serif", color:T.text }}>
       {/* ── Top bar ────────────────────────────────────────── */}
       <div style={{ borderBottom:`1px solid ${T.border}`, padding:'14px 20px', display:'flex', alignItems:'center', gap:'14px', background:T.surface, position:'sticky', top:0, zIndex:100 }}>
         <Link href="/studio" style={{ display:'flex', alignItems:'center', gap:'6px', color:T.sub, textDecoration:'none', fontSize:'13px', transition:'color .12s' }}
@@ -391,6 +399,7 @@ export default function ModelSwapPage() {
               {quotaInfo.used}/{quotaInfo.limit} swap/bln
             </div>
           )}
+          <ToolAccessBadge featureId={FEATURE_ID} />
           <div style={{ padding:'4px 10px', borderRadius:'6px', background:`${T.accent}15`, border:`1px solid ${T.accent}30`, fontSize:'11px', fontWeight:600, color:T.accent }}>
             Pro+ Only
           </div>
@@ -398,16 +407,17 @@ export default function ModelSwapPage() {
       </div>
 
       {/* ── Main layout ─────────────────────────────────────── */}
-      <div style={{ maxWidth:'1280px', margin:'0 auto', padding:'20px', display:'grid', gridTemplateColumns:'380px 1fr', gap:'20px', alignItems:'flex-start' }}>
+      <div className="bs-grid" style={{ maxWidth:'1280px', margin:'0 auto', padding:'20px', display:'grid', gap:'20px', alignItems:'flex-start' }}>
 
         {/* ════════════════════════════════════════════════════
             LEFT PANEL — Controls
         ════════════════════════════════════════════════════ */}
         <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
 
-          {/* Source image */}
+          {/* Source image — LANGKAH 1 */}
           <div style={{ padding:'16px', borderRadius:'14px', background:T.card, border:`1px solid ${T.border}` }}>
             <div style={{ display:'flex', alignItems:'center', gap:'7px', marginBottom:'12px' }}>
+              <Step n={1}/>
               <Camera size={14} color={T.accent}/>
               <span style={{ fontSize:'12px', fontWeight:700, color:T.gold, textTransform:'uppercase', letterSpacing:'0.06em' }}>Foto Sumber</span>
               <span style={{ fontSize:'9px', color:T.accent, fontWeight:700, padding:'2px 6px', borderRadius:'4px', background:`${T.accent}15` }}>WAJIB</span>
@@ -428,9 +438,9 @@ export default function ModelSwapPage() {
             />
 
             {/* Important note */}
-            <div style={{ marginTop:'10px', padding:'10px 12px', borderRadius:'8px', background:'rgba(59,130,246,.08)', border:`1px solid ${T.blueLo}`, display:'flex', gap:'8px', alignItems:'flex-start' }}>
+            <div style={{ marginTop:'10px', padding:'10px 12px', borderRadius:'8px', background:T.blueLo, border:`1px solid ${T.blue}30`, display:'flex', gap:'8px', alignItems:'flex-start' }}>
               <Info size={13} color={T.blue} style={{ flexShrink:0, marginTop:'1px' }}/>
-              <div style={{ fontSize:'11px', color:'#93C5FD', lineHeight:1.6 }}>
+              <div style={{ fontSize:'11px', color:T.blue, lineHeight:1.6 }}>
                 <strong>Yang dipertahankan AI:</strong> outfit, pose, lighting, background.<br/>
                 <strong>Yang diganti:</strong> wajah, kulit, rambut, bentuk tubuh.
               </div>
@@ -441,8 +451,8 @@ export default function ModelSwapPage() {
           <div style={{ padding:'16px', borderRadius:'14px', background:T.card, border:`1px solid ${T.border}` }}>
             <div style={{ display:'flex', alignItems:'center', gap:'7px', marginBottom:'12px' }}>
               <User size={14} color={T.gold}/>
-              <span style={{ fontSize:'12px', fontWeight:700, color:T.white, textTransform:'uppercase', letterSpacing:'0.06em' }}>Face Reference</span>
-              <span style={{ fontSize:'9px', color:T.muted, fontWeight:600, padding:'2px 6px', borderRadius:'4px', background:'rgba(255,255,255,.06)' }}>Opsional</span>
+              <span style={{ fontSize:'12px', fontWeight:700, color:T.text, textTransform:'uppercase', letterSpacing:'0.06em' }}>Face Reference</span>
+              <span style={{ fontSize:'9px', color:T.muted, fontWeight:600, padding:'2px 6px', borderRadius:'4px', background:T.goldLo }}>Opsional</span>
             </div>
             <UploadZone
               label="Upload Wajah Referensi"
@@ -461,11 +471,12 @@ export default function ModelSwapPage() {
             />
           </div>
 
-          {/* Identity preset selector */}
+          {/* Identity preset selector — LANGKAH 2 */}
           <div style={{ padding:'16px', borderRadius:'14px', background:T.card, border:`1px solid ${T.border}` }}>
             <div style={{ display:'flex', alignItems:'center', gap:'7px', marginBottom:'12px' }}>
+              <Step n={2}/>
               <Shuffle size={14} color={T.accent}/>
-              <span style={{ fontSize:'12px', fontWeight:700, color:T.white, textTransform:'uppercase', letterSpacing:'0.06em' }}>Pilih Identitas Baru</span>
+              <span style={{ fontSize:'12px', fontWeight:700, color:T.text, textTransform:'uppercase', letterSpacing:'0.06em' }}>Pilih Identitas Baru</span>
             </div>
 
             {/* Category tabs */}
@@ -478,19 +489,19 @@ export default function ModelSwapPage() {
               ))}
             </div>
 
-            {/* Preset grid */}
+            {/* Preset grid — 2 kolom */}
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'7px' }}>
               {IDENTITY_CATEGORIES.find(c=>c.id===activeCat)?.presets.map(pid => {
                 const p = IDENTITY_PRESETS[pid]
                 const selected = presetId === pid
                 return (
                   <button key={pid} type="button" onClick={() => setPresetId(pid)}
-                    style={{ padding:'11px 10px', borderRadius:'10px', border:`1.5px solid ${selected ? T.accent : T.border}`, background:selected ? `${T.accent}12` : 'rgba(255,255,255,.02)', cursor:'pointer', textAlign:'left', transition:'all .15s', boxShadow:selected ? `0 0 0 1px ${T.accent}40` : 'none' }}
+                    style={{ padding:'11px 10px', borderRadius:'10px', border:`1.5px solid ${selected ? T.accent : T.border}`, background:selected ? `${T.accent}12` : T.bg, cursor:'pointer', textAlign:'left', transition:'all .15s', boxShadow:selected ? `0 0 0 1px ${T.accent}40` : 'none' }}
                     onMouseEnter={e=>{ if(!selected)(e.currentTarget as HTMLElement).style.borderColor=T.borderHi }}
                     onMouseLeave={e=>{ if(!selected)(e.currentTarget as HTMLElement).style.borderColor=T.border }}>
                     <div style={{ display:'flex', alignItems:'center', gap:'6px', marginBottom:'3px' }}>
                       <span style={{ fontSize:'18px' }}>{p.icon}</span>
-                      <div>
+                      <div style={{ minWidth:0 }}>
                         <div style={{ fontSize:'11px', fontWeight:700, color:selected ? T.accent : T.text }}>{p.label}</div>
                       </div>
                       {selected && <Check size={11} color={T.accent} style={{ marginLeft:'auto', flexShrink:0 }}/>}
@@ -516,8 +527,8 @@ export default function ModelSwapPage() {
           <div style={{ padding:'16px', borderRadius:'14px', background:T.card, border:`1px solid ${T.border}` }}>
             <div style={{ display:'flex', alignItems:'center', gap:'7px', marginBottom:'12px' }}>
               <Palette size={14} color={T.accent}/>
-              <span style={{ fontSize:'12px', fontWeight:700, color:T.white, textTransform:'uppercase', letterSpacing:'0.06em' }}>Skin Tone</span>
-              <span style={{ fontSize:'9px', color:T.muted, padding:'2px 6px', borderRadius:'4px', background:'rgba(255,255,255,.06)' }}>Override Opsional</span>
+              <span style={{ fontSize:'12px', fontWeight:700, color:T.text, textTransform:'uppercase', letterSpacing:'0.06em' }}>Skin Tone</span>
+              <span style={{ fontSize:'9px', color:T.muted, padding:'2px 6px', borderRadius:'4px', background:T.goldLo }}>Override Opsional</span>
             </div>
             <div style={{ display:'flex', gap:'7px' }}>
               {SKIN_TONE_OPTIONS.map(st => {
@@ -525,7 +536,7 @@ export default function ModelSwapPage() {
                 return (
                   <button key={st.id} type="button" onClick={() => setSkinTone(skinTone === st.id ? '' : st.id)}
                     style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:'4px', padding:'8px 6px', borderRadius:'8px', border:`1.5px solid ${selected ? T.accent : T.border}`, background:'transparent', cursor:'pointer', transition:'all .12s' }}>
-                    <div style={{ width:'22px', height:'22px', borderRadius:'50%', background:st.hex, border:`2px solid ${selected ? T.accent : 'rgba(255,255,255,.15)'}`, boxShadow:selected ? `0 0 0 2px ${T.accent}40` : 'none' }}/>
+                    <div style={{ width:'22px', height:'22px', borderRadius:'50%', background:st.hex, border:`2px solid ${selected ? T.accent : T.border}`, boxShadow:selected ? `0 0 0 2px ${T.accent}40` : 'none' }}/>
                     <div style={{ fontSize:'9px', color:selected ? T.accent : T.muted, fontWeight:selected ? 700 : 500 }}>{st.label}</div>
                   </button>
                 )
@@ -538,7 +549,7 @@ export default function ModelSwapPage() {
           <div style={{ padding:'16px', borderRadius:'14px', background:T.card, border:`1px solid ${T.border}` }}>
             <div style={{ display:'flex', alignItems:'center', gap:'7px', marginBottom:'12px' }}>
               <Scissors size={14} color={T.accent}/>
-              <span style={{ fontSize:'12px', fontWeight:700, color:T.white, textTransform:'uppercase', letterSpacing:'0.06em' }}>Hairstyle</span>
+              <span style={{ fontSize:'12px', fontWeight:700, color:T.text, textTransform:'uppercase', letterSpacing:'0.06em' }}>Hairstyle</span>
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'5px' }}>
               {HAIRSTYLE_OPTIONS.map(h => {
@@ -555,11 +566,12 @@ export default function ModelSwapPage() {
             </div>
           </div>
 
-          {/* Body type + Swap mode */}
+          {/* Body type + Swap mode — LANGKAH 3 */}
           <div style={{ padding:'16px', borderRadius:'14px', background:T.card, border:`1px solid ${T.border}` }}>
             <div style={{ display:'flex', alignItems:'center', gap:'7px', marginBottom:'12px' }}>
+              <Step n={3}/>
               <Sparkles size={14} color={T.accent}/>
-              <span style={{ fontSize:'12px', fontWeight:700, color:T.white, textTransform:'uppercase', letterSpacing:'0.06em' }}>Pengaturan Swap</span>
+              <span style={{ fontSize:'12px', fontWeight:700, color:T.text, textTransform:'uppercase', letterSpacing:'0.06em' }}>Pengaturan Swap</span>
             </div>
 
             {/* Body type */}
@@ -619,7 +631,7 @@ export default function ModelSwapPage() {
                 placeholder='Contoh: "natural makeup, friendly smile" atau "beard stubble, sunglasses"'
                 maxLength={200}
                 rows={2}
-                style={{ width:'100%', background:'rgba(255,255,255,.04)', border:`1px solid ${T.border}`, borderRadius:'8px', padding:'9px 11px', fontSize:'11px', color:T.text, resize:'vertical', outline:'none', fontFamily:'inherit', lineHeight:1.5, transition:'border-color .15s', boxSizing:'border-box' }}
+                style={{ width:'100%', background:T.bg, border:`1px solid ${T.border}`, borderRadius:'8px', padding:'9px 11px', fontSize:'11px', color:T.text, resize:'vertical', outline:'none', fontFamily:'inherit', lineHeight:1.5, transition:'border-color .15s', boxSizing:'border-box' }}
                 onFocus={e=>(e.target as HTMLElement).style.borderColor=T.accent}
                 onBlur={e=>(e.target as HTMLElement).style.borderColor=T.border}
               />
@@ -628,7 +640,7 @@ export default function ModelSwapPage() {
           </div>
 
           {/* Tips */}
-          <div style={{ padding:'14px', borderRadius:'12px', background:'rgba(16,185,129,.06)', border:`1px solid ${T.accent}25` }}>
+          <div style={{ padding:'14px', borderRadius:'12px', background:`${T.accent}08`, border:`1px solid ${T.accent}25` }}>
             <div style={{ fontSize:'11px', fontWeight:700, color:T.accent, marginBottom:'7px', display:'flex', alignItems:'center', gap:'5px' }}>
               <Info size={12}/> Tips — {currentPreset?.label}
             </div>
@@ -642,7 +654,7 @@ export default function ModelSwapPage() {
             </div>
           </div>
 
-          {/* Generate button */}
+          {/* Generate button — LANGKAH 4 */}
           <button
             type="button"
             onClick={generate}
@@ -652,7 +664,7 @@ export default function ModelSwapPage() {
               padding:'14px', borderRadius:'12px', width:'100%', border:'none', cursor: !sourceFile || generating ? 'not-allowed' : 'pointer',
               background: !sourceFile || generating ? T.muted : `linear-gradient(135deg,${T.accent},${T.accent2})`,
               color:'#fff', fontSize:'14px', fontWeight:700, opacity: !sourceFile || generating ? .5 : 1,
-              transition:'all .18s', boxShadow: !sourceFile || generating ? 'none' : '0 4px 20px rgba(16,185,129,.35)',
+              transition:'all .18s', boxShadow: !sourceFile || generating ? 'none' : `0 4px 20px ${T.accent}40`,
               fontFamily:'inherit',
             }}
             onMouseEnter={e=>{ if(sourceFile&&!generating)(e.currentTarget as HTMLElement).style.transform='translateY(-1px)' }}
@@ -717,7 +729,7 @@ export default function ModelSwapPage() {
               <AlertCircle size={16} color={T.red} style={{ flexShrink:0, marginTop:'1px' }}/>
               <div>
                 <div style={{ fontSize:'13px', fontWeight:600, color:T.red, marginBottom:'2px' }}>Generate Gagal</div>
-                <div style={{ fontSize:'12px', color:'#FCA5A5', lineHeight:1.5 }}>{error}</div>
+                <div style={{ fontSize:'12px', color:T.red, lineHeight:1.5 }}>{error}</div>
                 {error.includes('Upgrade') && (
                   <Link href="/billing" style={{ display:'inline-flex', alignItems:'center', gap:'4px', marginTop:'8px', padding:'6px 12px', borderRadius:'7px', background:`linear-gradient(135deg,${T.gold},#D97706)`, color:'#fff', fontSize:'11px', fontWeight:700, textDecoration:'none' }}>
                     <ChevronRight size={11}/> Upgrade ke Pro
@@ -731,12 +743,12 @@ export default function ModelSwapPage() {
           {generating && (
             <div style={{ borderRadius:'16px', background:T.card, border:`1px solid ${T.border}`, padding:'48px 20px', display:'flex', flexDirection:'column', alignItems:'center', gap:'16px' }}>
               <div style={{ position:'relative', width:'64px', height:'64px' }}>
-                <div style={{ position:'absolute', inset:0, borderRadius:'50%', border:`3px solid ${T.accent}25`, animation:'none' }}/>
+                <div style={{ position:'absolute', inset:0, borderRadius:'50%', border:`3px solid ${T.accent}25` }}/>
                 <div style={{ position:'absolute', inset:0, borderRadius:'50%', border:`3px solid transparent`, borderTopColor:T.accent, animation:'spin .9s linear infinite' }}/>
                 <div style={{ position:'absolute', inset:'16px', borderRadius:'50%', background:`${T.accent}15`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'22px' }}>🔄</div>
               </div>
               <div style={{ textAlign:'center' }}>
-                <div style={{ fontSize:'15px', fontWeight:700, color:T.white, marginBottom:'6px' }}>
+                <div style={{ fontSize:'15px', fontWeight:700, color:T.text, marginBottom:'6px' }}>
                   AI sedang mengganti model...
                 </div>
                 <div style={{ fontSize:'12px', color:T.muted, marginBottom:'4px' }}>
@@ -747,7 +759,7 @@ export default function ModelSwapPage() {
                 </div>
               </div>
               {/* Progress steps */}
-              <div style={{ display:'flex', gap:'8px', alignItems:'center' }}>
+              <div style={{ display:'flex', gap:'8px', alignItems:'center', flexWrap:'wrap', justifyContent:'center' }}>
                 {[
                   { label:'Analisis foto', done: seconds > 5 },
                   { label:'Build prompt', done: seconds > 10 },
@@ -776,7 +788,7 @@ export default function ModelSwapPage() {
                   AI ganti orangnya, pertahankan outfit & pose
                 </div>
               </div>
-              {/* Feature matrix */}
+              {/* Feature matrix — 2 kolom */}
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px', width:'100%', maxWidth:'400px', marginTop:'8px' }}>
                 {[
                   { icon:'✅', label:'Outfit dipertahankan', color:T.accent },
@@ -786,7 +798,7 @@ export default function ModelSwapPage() {
                   { icon:'🔄', label:'Wajah diganti', color:T.gold },
                   { icon:'🔄', label:'Kulit & rambut baru', color:T.gold },
                 ].map((item, i) => (
-                  <div key={i} style={{ display:'flex', alignItems:'center', gap:'7px', padding:'8px 10px', borderRadius:'8px', background:'rgba(255,255,255,.03)', border:`1px solid ${T.border}`, fontSize:'11px', color:T.sub }}>
+                  <div key={i} style={{ display:'flex', alignItems:'center', gap:'7px', padding:'8px 10px', borderRadius:'8px', background:T.bg, border:`1px solid ${T.border}`, fontSize:'11px', color:T.sub }}>
                     <span style={{ fontSize:'13px' }}>{item.icon}</span>
                     <span style={{ color:item.color }}>{item.label}</span>
                   </div>
@@ -815,7 +827,7 @@ export default function ModelSwapPage() {
                     style={{ width:'100%', display:'block', maxHeight:'600px', objectFit:'contain' }}
                   />
                   {/* Preset badge */}
-                  <div style={{ position:'absolute', top:'12px', left:'12px', padding:'4px 10px', borderRadius:'7px', background:'rgba(0,0,0,.65)', fontSize:'10px', fontWeight:700, color:T.accent, backdropFilter:'blur(6px)', display:'flex', alignItems:'center', gap:'5px' }}>
+                  <div style={{ position:'absolute', top:'12px', left:'12px', padding:'4px 10px', borderRadius:'7px', background:'rgba(0,0,0,.65)', fontSize:'10px', fontWeight:700, color:T.white, backdropFilter:'blur(6px)', display:'flex', alignItems:'center', gap:'5px' }}>
                     {currentPreset?.icon} {currentPreset?.label}
                   </div>
                   {/* Swap mode badge */}
@@ -829,7 +841,7 @@ export default function ModelSwapPage() {
                       <ZoomIn size={15} color={T.white}/>
                     </button>
                     <button type="button" onClick={() => download(results[activeResult], activeResult)}
-                      style={{ display:'flex', alignItems:'center', gap:'5px', padding:'8px 14px', borderRadius:'8px', background:`linear-gradient(135deg,${T.accent},${T.accent2})`, border:'none', color:'#fff', fontSize:'12px', fontWeight:700, cursor:'pointer', boxShadow:'0 2px 12px rgba(16,185,129,.4)', fontFamily:'inherit' }}>
+                      style={{ display:'flex', alignItems:'center', gap:'5px', padding:'8px 14px', borderRadius:'8px', background:`linear-gradient(135deg,${T.accent},${T.accent2})`, border:'none', color:'#fff', fontSize:'12px', fontWeight:700, cursor:'pointer', boxShadow:`0 2px 12px ${T.accent}55`, fontFamily:'inherit' }}>
                       <Download size={13}/> Download
                     </button>
                   </div>
@@ -854,7 +866,7 @@ export default function ModelSwapPage() {
                 </div>
               )}
 
-              {/* Action bar */}
+              {/* Action bar — 4 kolom */}
               <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'7px', marginBottom:'14px' }}>
                 {[
                   { icon:<Download size={14}/>,   label:'Download',   action:()=>download(results[activeResult],activeResult), color:T.accent },
@@ -889,7 +901,7 @@ export default function ModelSwapPage() {
                       { icon:'✅', label:'Pose dipertahankan' },
                       { icon:'🔄', label:`Identitas: ${currentPreset?.label}` },
                     ].map((tag, i) => (
-                      <span key={i} style={{ fontSize:'10px', fontWeight:600, padding:'2px 8px', borderRadius:'99px', background:'rgba(255,255,255,.06)', color:T.sub }}>
+                      <span key={i} style={{ fontSize:'10px', fontWeight:600, padding:'2px 8px', borderRadius:'99px', background:T.goldLo, color:T.sub }}>
                         {tag.icon} {tag.label}
                       </span>
                     ))}
@@ -897,9 +909,9 @@ export default function ModelSwapPage() {
                 </div>
               </div>
 
-              {/* What's next */}
+              {/* What's next — 3 kolom */}
               <div style={{ marginTop:'12px', padding:'14px', borderRadius:'12px', background:T.card, border:`1px solid ${T.border}` }}>
-                <div style={{ fontSize:'11px', fontWeight:700, color:T.white, marginBottom:'10px' }}>Langkah Selanjutnya</div>
+                <div style={{ fontSize:'11px', fontWeight:700, color:T.text, marginBottom:'10px' }}>Langkah Selanjutnya</div>
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'6px' }}>
                   {[
                     { icon:'🔍', label:'Upscale 4K', href:'/studio/image/upscale', color:T.gold },
@@ -907,9 +919,9 @@ export default function ModelSwapPage() {
                     { icon:'📐', label:'Crop Marketplace', href:'/quick-tools', color:T.accent },
                   ].map((item, i) => (
                     <Link key={i} href={item.href}
-                      style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'5px', padding:'10px 6px', borderRadius:'9px', border:`1px solid ${T.border}`, background:'rgba(255,255,255,.02)', textDecoration:'none', transition:'all .15s' }}
+                      style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'5px', padding:'10px 6px', borderRadius:'9px', border:`1px solid ${T.border}`, background:T.bg, textDecoration:'none', transition:'all .15s' }}
                       onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=item.color;(e.currentTarget as HTMLElement).style.background=`${item.color}10`}}
-                      onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=T.border;(e.currentTarget as HTMLElement).style.background='rgba(255,255,255,.02)'}}>
+                      onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=T.border;(e.currentTarget as HTMLElement).style.background=T.bg}}>
                       <span style={{ fontSize:'16px' }}>{item.icon}</span>
                       <span style={{ fontSize:'10px', fontWeight:600, color:item.color, textAlign:'center' }}>{item.label}</span>
                     </Link>
@@ -925,17 +937,17 @@ export default function ModelSwapPage() {
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
         * { box-sizing: border-box }
         @keyframes spin { to { transform: rotate(360deg) } }
-        textarea::placeholder { color: #52525B }
-        ::-webkit-scrollbar { width: 5px }
-        ::-webkit-scrollbar-track { background: #111115 }
-        ::-webkit-scrollbar-thumb { background: #3F3F46; border-radius: 3px }
+        textarea::placeholder { color: #B9A78C }
+        ::-webkit-scrollbar { width: 6px }
+        ::-webkit-scrollbar-track { background: #FBEFD8 }
+        ::-webkit-scrollbar-thumb { background: #E7D3A8; border-radius: 3px }
 
-        @media (max-width: 900px) {
-          div[style*="grid-template-columns: 380px"] {
-            grid-template-columns: 1fr !important;
-          }
-        }
+        /* Grid 2 kolom: kiri kontrol, kanan hasil. minmax(0,1fr) + min-width:0 = anti-overflow */
+        .bs-grid { grid-template-columns: minmax(300px,360px) minmax(0,1fr); }
+        .bs-grid > div { min-width: 0; }
+        @media (max-width: 980px) { .bs-grid { grid-template-columns: 1fr; } }
       `}</style>
     </div>
+    </ToolGate>
   )
 }

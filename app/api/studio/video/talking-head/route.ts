@@ -28,7 +28,7 @@ import { NextResponse }  from 'next/server'
 import { createClient }  from '@/lib/supabase/server'
 import Anthropic         from '@anthropic-ai/sdk'
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
-import { withCredits } from '@/lib/credit-middleware'
+import { withCredits } from '@/lib/middleware/credit-middleware'
 import { AVATAR_LIBRARY, VOICE_LIBRARY, EMOTION_SETTINGS, BACKGROUND_PRESETS,
   type TalkingHeadConfig, type ScriptSegment, type VoiceEmotion,
 } from '@/lib/avatar/types'

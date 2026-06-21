@@ -11,7 +11,7 @@
 // ── Core types ────────────────────────────────────────────────
 export interface OAuthTokens {
   access_token:    string
-  refresh_token:?:  string
+  refresh_token?:   string
   tokenType?:     string
   expiresIn?:     number    // seconds from now
   expiresAt?:     Date
