@@ -2,8 +2,12 @@
 // ══════════════════════════════════════════════════════════════
 // TIKTOK REELS AI — API Route
 // POST ?action=analyze   → parse URL / product info with AI
-// POST ?action=script    → generate full script + hooks + captions + hashtags
-// POST ?action=variants  → generate 3 A/B hook variants (all 12 script types at once)
+// POST ?action=script    → generate full script + hooks + caption + hashtags
+// POST ?action=variants  → generate ALL 12 script types at once
+// ──────────────────────────────────────────────────────────────
+// FIX: prompt variants kini dibangun dari SCRIPT_VARIANTS lewat
+//      buildVariantsPrompt() → id output AI selalu cocok dgn parser
+//      (sebelumnya pakai id hardcoded yg beda → 5 kartu kosong).
 // ══════════════════════════════════════════════════════════════
 
 import { NextResponse } from 'next/server'
@@ -11,8 +15,8 @@ import { createClient } from '@/lib/supabase/server'
 import Anthropic from '@anthropic-ai/sdk'
 import {
   buildScriptPrompt, buildHookVariants, buildHashtags,
-  SCRIPT_VARIANTS, PLATFORMS, VISUAL_SEQUENCES,
-  extractPlatformFromUrl,
+  buildVariantsPrompt, extractPlatformFromUrl,
+  SCRIPT_VARIANTS, VISUAL_SEQUENCES,
   type ScriptVariantId, type PlatformId, type NicheId,
   type DurationSec,
 } from '@/lib/studio/tiktok/presets'
@@ -25,7 +29,7 @@ function getAnthropic() {
   return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 }
 
-// ── Parse Claude response into sections ────────────────────────
+// ── Parse Claude response into tagged sections ─────────────────
 function parseSections(raw: string): Record<string, string> {
   const sections: Record<string, string> = {}
   const tags = ['HOOK', 'SCRIPT', 'CAPTION', 'CTA', 'VISUAL_NOTES']
@@ -57,15 +61,12 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'URL produk wajib diisi' }, { status: 400 })
       }
 
-      const platform = extractPlatformFromUrl(productUrl)
-
-      // Use Claude to analyze/simulate product extraction
-      // In production: call Shopee/TikTok API or web-scrape
-      const anthropic = getAnthropic()
+      const platform  = extractPlatformFromUrl(productUrl)
+      const anthropic  = getAnthropic()
       const msg = await anthropic.messages.create({
         model:      'claude-sonnet-4-6',
         max_tokens: 600,
-        system: `You are a product analyst for Indonesian e-commerce. 
+        system: `You are a product analyst for Indonesian e-commerce.
 Extract or infer realistic product information from a marketplace URL.
 Always respond ONLY in JSON format with these exact keys:
 {
@@ -82,7 +83,7 @@ If the URL seems like a product page, make realistic estimates. Never refuse.`,
         messages: [{ role: 'user', content: `Analyze this ${platform} product URL and extract info: ${productUrl}\n\nRespond with JSON only, no markdown.` }],
       })
 
-      const raw  = (msg.content[0] as any).text ?? '{}'
+      const raw   = (msg.content[0] as any).text ?? '{}'
       const clean = raw.replace(/```json?|```/g, '').trim()
 
       try {
@@ -101,28 +102,28 @@ If the URL seems like a product page, make realistic estimates. Never refuse.`,
         targetMarket, mainBenefit, painPoint, socialProof,
         niche, language, tone, affiliateCode,
       } = body as {
-        variantId:     ScriptVariantId
-        platform:      PlatformId
-        duration:      DurationSec
-        productName:   string
-        productPrice:  string
-        targetMarket:  string
-        mainBenefit:   string
-        painPoint:     string
-        socialProof:   string
-        niche:         NicheId
-        language:      'indonesia' | 'english'
-        tone:          string
-        affiliateCode?:string
+        variantId:      ScriptVariantId
+        platform:       PlatformId
+        duration:       DurationSec
+        productName:    string
+        productPrice:   string
+        targetMarket:   string
+        mainBenefit:    string
+        painPoint:      string
+        socialProof:    string
+        niche:          NicheId
+        language:       'indonesia' | 'english'
+        tone:           string
+        affiliateCode?: string
       }
 
       if (!productName?.trim()) return NextResponse.json({ error: 'Nama produk wajib diisi' }, { status: 400 })
       if (!variantId)           return NextResponse.json({ error: 'Pilih jenis script' },      { status: 400 })
 
-      const prompt    = buildScriptPrompt({ variantId, platform, duration, productName, productPrice, targetMarket, mainBenefit, painPoint, socialProof, niche, language: language ?? 'indonesia', tone: tone ?? 'casual', affiliateCode })
-      const hooks     = buildHookVariants(productName, niche ?? 'general', productPrice ?? '')
-      const hashtags  = buildHashtags(niche ?? 'general', platform ?? 'tiktok', productName)
-      const scenes    = VISUAL_SEQUENCES[variantId] ?? []
+      const prompt   = buildScriptPrompt({ variantId, platform, duration, productName, productPrice, targetMarket, mainBenefit, painPoint, socialProof, niche, language: language ?? 'indonesia', tone: tone ?? 'casual', affiliateCode })
+      const hooks    = buildHookVariants(productName, niche ?? 'general', productPrice ?? '')
+      const hashtags = buildHashtags(niche ?? 'general', platform ?? 'tiktok', productName)
+      const scenes   = VISUAL_SEQUENCES[variantId] ?? []
 
       const anthropic = getAnthropic()
       const msg = await anthropic.messages.create({
@@ -138,10 +139,10 @@ If the URL seems like a product page, make realistic estimates. Never refuse.`,
       return NextResponse.json({
         success: true,
         script: {
-          hook:         sections.hook        ?? '',
-          fullScript:   sections.script      ?? raw,
-          caption:      sections.caption     ?? '',
-          cta:          sections.cta         ?? '',
+          hook:         sections.hook         ?? '',
+          fullScript:   sections.script       ?? raw,
+          caption:      sections.caption      ?? '',
+          cta:          sections.cta          ?? '',
           visualNotes:  sections.visual_notes ?? '',
           visualScenes: scenes,
         },
@@ -157,34 +158,30 @@ If the URL seems like a product page, make realistic estimates. Never refuse.`,
     // ── action=variants: generate ALL 12 scripts at once ──────
     if (action === 'variants') {
       const body = await req.json()
-      const { productName, productPrice, targetMarket, mainBenefit, painPoint, socialProof, niche, platform, duration } = body
+      const {
+        productName, productPrice, targetMarket, mainBenefit,
+        painPoint, socialProof, niche, platform, duration,
+      } = body as {
+        productName:   string
+        productPrice?: string
+        targetMarket?: string
+        mainBenefit?:  string
+        painPoint?:    string
+        socialProof?:  string
+        niche?:        NicheId
+        platform?:     PlatformId
+        duration?:     DurationSec
+      }
 
       if (!productName?.trim()) return NextResponse.json({ error: 'Nama produk wajib diisi' }, { status: 400 })
 
+      // Prompt dibangun dari SCRIPT_VARIANTS → id pasti cocok dgn parser
+      const systemPrompt = buildVariantsPrompt({
+        productName, productPrice, targetMarket, mainBenefit,
+        painPoint, socialProof, niche, platform, duration,
+      })
+
       const anthropic = getAnthropic()
-
-      // Build a compact multi-script prompt
-      const systemPrompt = `You are an expert TikTok/Reels viral scriptwriter for Indonesian e-commerce.
-Generate 12 different video scripts for the same product — one for each format.
-Product: ${productName} | Price: ${productPrice || 'competitively priced'} | Benefit: ${mainBenefit} | Pain point: ${painPoint} | Target: ${targetMarket}
-
-For each script type, write ONLY: [TYPE_ID] then 2-3 sentences hook + script. Keep each under 80 words.
-Output 12 entries, one per line, in this format:
-[soft-selling] <hook> ... <script snippet>
-[hard-selling] <hook> ... <script snippet>
-[storytelling] <hook> ... <script snippet>
-[ugc-review] <hook> ... <script snippet>
-[product-review] <hook> ... <script snippet>
-[comparison] <hook> ... <script snippet>
-[affiliate] <hook> ... <script snippet>
-[problem-solution] <hook> ... <script snippet>
-[before-after] <hook> ... <script snippet>
-[tutorial] <hook> ... <script snippet>
-[unboxing] <hook> ... <script snippet>
-[testimonial] <hook> ... <script snippet>
-
-Write in bahasa Indonesia. Make each hook unique and compelling. No extra text.`
-
       const msg = await anthropic.messages.create({
         model:      'claude-sonnet-4-6',
         max_tokens: 2000,
@@ -195,7 +192,7 @@ Write in bahasa Indonesia. Make each hook unique and compelling. No extra text.`
       const hooks   = buildHookVariants(productName, niche ?? 'general', productPrice ?? '')
       const hashObj = buildHashtags(niche ?? 'general', platform ?? 'tiktok', productName)
 
-      // Parse each variant
+      // Parse tiap variasi berdasarkan id SCRIPT_VARIANTS
       const variantScripts: Record<string, string> = {}
       SCRIPT_VARIANTS.forEach(v => {
         const re    = new RegExp(`\\[${v.id}\\]([^\\[]+)`, 'i')
@@ -204,12 +201,12 @@ Write in bahasa Indonesia. Make each hook unique and compelling. No extra text.`
       })
 
       return NextResponse.json({
-        success:        true,
+        success:       true,
         variantScripts,
-        hookVariants:   hooks,
-        hashtags:       hashObj,
-        totalVariants:  SCRIPT_VARIANTS.length,
-        elapsedMs:      Date.now() - t0,
+        hookVariants:  hooks,
+        hashtags:      hashObj,
+        totalVariants: SCRIPT_VARIANTS.length,
+        elapsedMs:     Date.now() - t0,
       })
     }
 

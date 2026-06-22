@@ -137,12 +137,51 @@ function MarketingKitInner() {
       </div>
 
       {/* Tool tabs — scrollable */}
-      <div style={{ display:'flex', gap:'6px', marginBottom:'20px', overflowX:'auto', paddingBottom:'4px', scrollbarWidth:'none' } as React.CSSProperties}>
+      <div style={{ 
+        display: 'flex', 
+        gap: '8px', 
+        marginBottom: '20px', 
+        overflowX: 'auto',        // Mengaktifkan scroll horizontal
+        paddingBottom: '8px',      // Ruang untuk scrollbar
+        scrollSnapType: 'x mandatory', // Efek "magnet" saat di-scroll
+        scrollbarWidth: 'thin',    // Scrollbar tetap ada agar user PC bisa drag
+        WebkitOverflowScrolling: 'touch' // Smooth scroll di mobile
+      }}>
+        {/* CSS untuk mempercantik scrollbar di browser berbasis Webkit (Chrome/Edge/Safari) */}
+        <style>{`
+          div::-webkit-scrollbar { height: 4px; }
+          div::-webkit-scrollbar-track { background: #F1F5F9; border-radius: 4px; }
+          div::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+          div::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+        `}</style>
+
         {TOOLS.map(t => {
           const sel = activeTool === t.id
           return (
-            <button key={t.id} type="button" onClick={() => setActiveTool(t.id)}
-              style={{ display:'flex', alignItems:'center', gap:'5px', padding:'7px 14px', borderRadius:'99px', border:`1.5px solid ${sel?t.color:C.border}`, background:sel?`${t.color}12`:C.surface, color:sel?t.color:C.inkMuted, fontSize:'12px', fontWeight:sel?700:500, cursor:'pointer', transition:'all .15s', whiteSpace:'nowrap', flexShrink:0, fontFamily:'inherit', boxShadow:sel?`0 0 0 1px ${t.color}20`:'none' }}>
+            <button 
+              key={t.id} 
+              type="button" 
+              onClick={() => setActiveTool(t.id)}
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '6px', 
+                padding: '8px 16px', 
+                borderRadius: '99px', 
+                border: `1.5px solid ${sel ? t.color : C.border}`, 
+                background: sel ? `${t.color}12` : C.surface, 
+                color: sel ? t.color : C.inkMuted, 
+                fontSize: '12px', 
+                fontWeight: sel ? 700 : 500, 
+                cursor: 'pointer', 
+                transition: 'all 0.2s ease', 
+                whiteSpace: 'nowrap', // Mencegah teks turun baris
+                flexShrink: 0,       // MENCEGAH TOMBOL MENGECIL (PENTING)
+                fontFamily: 'inherit', 
+                boxShadow: sel ? `0 4px 6px -1px ${t.color}10` : 'none',
+                scrollSnapAlign: 'start' // Membantu fitur snap
+              }}
+            >
               <span>{t.icon}</span>{t.label}
             </button>
           )

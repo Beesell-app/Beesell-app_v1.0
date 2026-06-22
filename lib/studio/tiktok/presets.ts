@@ -631,3 +631,181 @@ export function buildTikTokPostPayload(input: BuildPayloadInput): TikTokPublishP
     },
   }
 }
+
+// ══════════════════════════════════════════════════════════════
+// HELPERS UNTUK ROUTE API (single source of truth)
+// ──────────────────────────────────────────────────────────────
+// Dipakai oleh app/api/studio/video/tiktok/route.ts
+// ══════════════════════════════════════════════════════════════
+
+// ── Deteksi marketplace dari URL produk ───────────────────────
+export function extractPlatformFromUrl(url: string): string {
+  const u = (url || '').toLowerCase()
+  if (u.includes('shopee'))    return 'Shopee'
+  if (u.includes('tiktok'))    return 'TikTok Shop'
+  if (u.includes('tokopedia')) return 'Tokopedia'
+  if (u.includes('lazada'))    return 'Lazada'
+  if (u.includes('bukalapak')) return 'Bukalapak'
+  if (u.includes('blibli'))    return 'Blibli'
+  return 'website'
+}
+
+// ── Label bahasa untuk prompt ─────────────────────────────────
+function langLabel(language: 'indonesia' | 'english'): string {
+  return language === 'english'
+    ? 'English'
+    : 'Bahasa Indonesia (gaya seller TikTok Indonesia, natural & santai)'
+}
+
+// ── Prompt single script (output bertag untuk parseSections) ──
+export interface ScriptPromptInput {
+  variantId:      ScriptVariantId
+  platform:       PlatformId
+  duration:       DurationSec
+  productName:    string
+  productPrice:   string
+  targetMarket:   string
+  mainBenefit:    string
+  painPoint:      string
+  socialProof:    string
+  niche:          NicheId
+  language:       'indonesia' | 'english'
+  tone:           string
+  affiliateCode?: string
+}
+
+export function buildScriptPrompt(input: ScriptPromptInput): string {
+  const v    = SCRIPT_VARIANTS.find(s => s.id === input.variantId) ?? SCRIPT_VARIANTS[0]
+  const plat = PLATFORMS.find(p => p.id === input.platform) ?? PLATFORMS[0]
+  const isAffiliate = input.variantId === 'affiliate' && !!input.affiliateCode?.trim()
+
+  return `Tulis script video pendek untuk ${plat.label} (durasi target ${input.duration} detik).
+
+GAYA SCRIPT: ${v.label} — ${v.desc}
+FRAMEWORK: ${v.framework}
+STRUKTUR (ikuti urutan ini):
+${v.structure.map((s, i) => `${i + 1}. ${s}`).join('\n')}
+
+DATA PRODUK:
+- Nama: ${input.productName}
+- Harga: ${input.productPrice || '(belum disebut — buat menarik tanpa angka spesifik)'}
+- Benefit utama: ${input.mainBenefit || '(simpulkan sendiri yang masuk akal)'}
+- Pain point: ${input.painPoint || '(simpulkan masalah relevan)'}
+- Target market: ${input.targetMarket || 'pembeli online Indonesia'}
+- Social proof: ${input.socialProof || '(boleh estimasi wajar)'}
+- Niche: ${input.niche}
+${isAffiliate ? `- Kode affiliate (WAJIB disebut di CTA): ${input.affiliateCode}` : ''}
+
+ATURAN:
+- Bahasa: ${langLabel(input.language)}
+- Tone: ${input.tone}
+- Hook wajib menahan scroll di 3 detik pertama.
+- Bahasa natural seperti orang ngomong, jangan kaku/robotik.
+- Fokus konversi: arahkan ke keranjang kuning / link produk.
+
+OUTPUT WAJIB persis dengan tag berikut (jangan ada teks lain di luar tag):
+[HOOK]
+(1 kalimat hook paling kuat)
+[SCRIPT]
+(naskah lengkap siap dibaca, sesuai struktur & durasi)
+[CAPTION]
+(caption singkat untuk ${plat.label}, tanpa hashtag)
+[CTA]
+(1-2 kalimat call to action${isAffiliate ? `, sertakan kode ${input.affiliateCode}` : ''})
+[VISUAL_NOTES]
+(tips visual/shot singkat)`
+}
+
+// ── Prompt 12 variasi sekaligus (id SELALU cocok SCRIPT_VARIANTS) ──
+export interface VariantsPromptInput {
+  productName:   string
+  productPrice?: string
+  targetMarket?: string
+  mainBenefit?:  string
+  painPoint?:    string
+  socialProof?:  string
+  niche?:        NicheId
+  platform?:     PlatformId
+  duration?:     DurationSec
+}
+
+export function buildVariantsPrompt(input: VariantsPromptInput): string {
+  const list = SCRIPT_VARIANTS
+    .map(v => `[${v.id}] (${v.label}) <hook + cuplikan script ~${v.idealDuration} detik>`)
+    .join('\n')
+
+  return `Kamu scriptwriter viral TikTok/Reels untuk e-commerce Indonesia.
+Buat 12 script BERBEDA untuk produk yang SAMA — satu untuk tiap format di bawah.
+
+PRODUK: ${input.productName} | Harga: ${input.productPrice || 'kompetitif'} | Benefit: ${input.mainBenefit || '-'} | Pain point: ${input.painPoint || '-'} | Target: ${input.targetMarket || 'pembeli online Indonesia'}
+
+Untuk tiap format, tulis HANYA: [id-format] lalu hook + cuplikan script (maks 80 kata).
+Output 12 baris dengan format PERSIS seperti ini (pertahankan id di dalam kurung siku):
+${list}
+
+Tulis dalam Bahasa Indonesia natural. Buat tiap hook unik & menjual. Jangan tambahkan teks lain.`
+}
+
+// ── Hook variants (template, tanpa AI) ────────────────────────
+export function buildHookVariants(productName: string, _niche: NicheId, price: string): string[] {
+  const p     = productName?.trim() || 'produk ini'
+  const harga = price?.trim()
+  return [
+    `Nggak nyangka ${p} bisa se-ngefek ini, coba lihat deh...`,                       // curiosity gap
+    `Udah ribuan orang checkout ${p}, dan ini alasan mereka repeat order.`,            // social proof
+    harga
+      ? `Cuma ${harga} tapi hasilnya kayak produk mahal — ini buktinya.`              // price anchor
+      : `Harga segini tapi kualitasnya nggak main-main, ini buktinya.`,
+    `STOP scroll. Kalau kamu punya masalah yang sama, ${p} wajib kamu tahu.`,
+    `Aku coba ${p} seminggu, dan hasilnya bikin nyesel kenapa nggak dari dulu.`,
+    `Ini yang nggak diceritain penjual lain soal ${p}...`,
+  ]
+}
+
+// ── Hashtag generator ─────────────────────────────────────────
+const NICHE_HASHTAGS: Record<NicheId, string[]> = {
+  general:  ['#rekomendasi', '#produkviral', '#wajibpunya', '#olshopindonesia'],
+  fashion:  ['#ootd', '#fashionindonesia', '#outfitinspo', '#fashiontiktok'],
+  beauty:   ['#beauty', '#makeup', '#beautytips', '#makeuptutorial'],
+  skincare: ['#skincare', '#skincareroutine', '#glowing', '#skincareindonesia'],
+  food:     ['#kulinerviral', '#makananenak', '#foodie', '#jajananviral'],
+  gadget:   ['#gadget', '#teknologi', '#gadgetmurah', '#reviewgadget'],
+  health:   ['#herbal', '#kesehatan', '#hidupsehat', '#suplemen'],
+  home:     ['#peralatanrumah', '#homedecor', '#rumahminimalis', '#perabotanrumah'],
+  baby:     ['#perlengkapanbayi', '#ibudananak', '#babyshop', '#momlife'],
+  hijab:    ['#hijabstyle', '#hijabootd', '#fashionhijab', '#hijabers'],
+}
+
+function slugifyTag(name: string): string {
+  const slug = (name || '').toLowerCase().replace(/[^a-z0-9]+/g, '')
+  return slug ? `#${slug.slice(0, 24)}` : '#produk'
+}
+
+export interface HashtagSet {
+  trending: string[]
+  niche:    string[]
+  general:  string[]
+  product:  string[]
+}
+
+export function buildHashtags(niche: NicheId, platform: PlatformId, productName: string): HashtagSet {
+  const platTag =
+    platform === 'reels'  ? ['#reels', '#instagramreels'] :
+    platform === 'shorts' ? ['#shorts', '#youtubeshorts'] :
+                            ['#tiktok', '#tiktokshop']
+
+  const words    = (productName || '').trim().split(/\s+/).filter(Boolean)
+  const firstTwo = words.slice(0, 2).join('')
+  const productTags = Array.from(new Set([
+    slugifyTag(productName),
+    firstTwo ? slugifyTag(firstTwo) : '#produkviral',
+    '#racuntiktok',
+  ]))
+
+  return {
+    trending: ['#fyp', '#foryou', '#viral', '#masukberanda', '#trending'],
+    niche:    NICHE_HASHTAGS[niche] ?? NICHE_HASHTAGS.general,
+    general:  ['#racunshopee', '#review', '#rekomendasi', ...platTag],
+    product:  productTags,
+  }
+}

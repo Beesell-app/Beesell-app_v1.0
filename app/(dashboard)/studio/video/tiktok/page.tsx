@@ -35,6 +35,7 @@ import {
   type NicheId,
   type DurationSec,
 } from '@/lib/studio/tiktok/presets'
+import { consumePublishHandoff } from '@/lib/studio/tiktok/handoff'
 
 // ── Design tokens — TEMA LEBAH / MADU (light) ─────────────────
 const C = {
@@ -87,6 +88,14 @@ const NICHES: { id: NicheId; label: string; icon: string }[] = [
 ]
 
 const TONES = ['casual','energetik','profesional','luxury','gen-z','islami']
+
+// Label privacy level TikTok → Bahasa Indonesia
+const PRIVACY_LABEL: Record<string, string> = {
+  PUBLIC_TO_EVERYONE:    'Publik',
+  MUTUAL_FOLLOW_FRIENDS: 'Teman',
+  FOLLOWER_OF_CREATOR:   'Pengikut',
+  SELF_ONLY:             'Privat',
+}
 
 // ── Output tab types ──────────────────────────────────────────
 type OutputTab = 'script' | 'hooks' | 'visual' | 'caption' | 'hashtag' | 'publish'
@@ -420,6 +429,25 @@ export default function TikTokReelsPage() {
   // ── Publish (TikTok API) state ────────────────────────────
   const [postPresetId,  setPostPresetId]  = useState<string>('organic')
 
+  // koneksi akun TikTok
+  const [conn,          setConn]          = useState<{ connected: boolean; username?: string | null; needReauth?: boolean } | null>(null)
+  const [connLoading,   setConnLoading]   = useState(false)
+  // creator info (username + privacy options) — wajib utk UX TikTok
+  const [creator,       setCreator]       = useState<any | null>(null)
+  // konfigurasi posting
+  const [videoUrl,      setVideoUrl]      = useState('')
+  const [pubPrivacy,    setPubPrivacy]    = useState<string>('SELF_ONLY')
+  const [pubNoComment,  setPubNoComment]  = useState(false)
+  const [pubNoDuet,     setPubNoDuet]     = useState(false)
+  const [pubNoStitch,   setPubNoStitch]   = useState(false)
+  // status publish
+  const [publishing,    setPublishing]    = useState(false)
+  const [pubResult,     setPubResult]     = useState<{ publishId?: string; privacyUsed?: string; note?: string } | null>(null)
+  const [pubStatus,     setPubStatus]     = useState<string>('')
+  const [pubError,      setPubError]      = useState('')
+  const [oauthNotice,   setOauthNotice]   = useState<string>('')
+  const [handoffSource, setHandoffSource] = useState<string>('')
+
   // ── Timers ────────────────────────────────────────────────
   const analyzeTimer = useRef<ReturnType<typeof setInterval> | null>(null)
   const genTimer     = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -431,6 +459,70 @@ export default function TikTokReelsPage() {
       if (genTimer.current)     clearInterval(genTimer.current)
     }
   }, [])
+
+  // ── Cek koneksi TikTok + tangani redirect balik dari OAuth ──
+  const checkConnection = useCallback(async () => {
+    setConnLoading(true)
+    try {
+      const res  = await fetch('/api/studio/video/tiktok/connection')
+      const data = await res.json()
+      setConn(data)
+    } catch {
+      setConn({ connected: false })
+    } finally {
+      setConnLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    checkConnection()
+    // Notifikasi hasil OAuth (?tiktok=connected|denied|error|...)
+    const params = new URLSearchParams(window.location.search)
+    const tk = params.get('tiktok')
+    if (tk) {
+      const map: Record<string, string> = {
+        connected:      '✅ Akun TikTok berhasil terhubung.',
+        denied:         '⚠️ Kamu membatalkan koneksi TikTok.',
+        state_mismatch: '⚠️ Sesi koneksi kedaluwarsa, coba hubungkan lagi.',
+        unauthorized:   '⚠️ Sesi login berakhir, login ulang lalu coba lagi.',
+        error:          '❌ Gagal menghubungkan TikTok, coba lagi.',
+      }
+      setOauthNotice(map[tk] ?? '')
+      // bersihkan query param dari URL
+      params.delete('tiktok')
+      const clean = window.location.pathname + (params.toString() ? `?${params}` : '')
+      window.history.replaceState({}, '', clean)
+    }
+
+    // Handoff dari UGC Generator (videoUrl + caption) → auto-isi tab Publish
+    const ho = consumePublishHandoff()
+    if (ho?.videoUrl) {
+      setVideoUrl(ho.videoUrl)
+      setHandoffSource(ho.source ?? 'ugc')
+      if (ho.productName) setProductName(ho.productName)
+      // Synthesize result minimal agar tab Publish bisa langsung tampil
+      setResult({
+        script: {
+          hook:         '',
+          fullScript:   ho.caption ?? '',
+          caption:      ho.caption ?? '',
+          cta:          '',
+          visualNotes:  '',
+          visualScenes: [],
+        },
+        hooks:    [],
+        hashtags: { trending: [], niche: [], general: [], product: [] },
+      })
+      setActiveOutput('publish')
+      // bersihkan ?from=ugc dari URL
+      const p2 = new URLSearchParams(window.location.search)
+      if (p2.get('from')) {
+        p2.delete('from')
+        const clean2 = window.location.pathname + (p2.toString() ? `?${p2}` : '')
+        window.history.replaceState({}, '', clean2)
+      }
+    }
+  }, [checkConnection])
 
   // ── Helpers ───────────────────────────────────────────────
   const stopAnalyzeTimer = () => {
@@ -581,6 +673,81 @@ export default function TikTokReelsPage() {
     postPreset: selectedPreset,
     suggestedSound: soundList[0]?.label,
   }) : null
+
+  // ── Handlers TikTok publish ───────────────────────────────
+  const connectTikTok = () => { window.location.href = '/api/studio/video/tiktok/auth' }
+
+  const disconnectTikTok = async () => {
+    try { await fetch('/api/studio/video/tiktok/connection', { method: 'DELETE' }) } catch { /* silent */ }
+    setConn({ connected: false }); setCreator(null); setPubResult(null); setPubStatus('')
+  }
+
+  const loadCreatorInfo = async () => {
+    setPubError('')
+    try {
+      const res  = await fetch('/api/studio/video/tiktok/publish?action=creator-info', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        if (data.needAuth) setConn({ connected: false })
+        throw new Error(data.error ?? 'Gagal ambil info creator')
+      }
+      setCreator(data.creator)
+      const opts: string[] = data.creator?.privacy_level_options ?? []
+      if (opts.length) setPubPrivacy(opts[0])
+      if (data.creator?.comment_disabled) setPubNoComment(true)
+      if (data.creator?.duet_disabled)    setPubNoDuet(true)
+      if (data.creator?.stitch_disabled)  setPubNoStitch(true)
+    } catch (e: any) {
+      setPubError(e?.message ?? 'Gagal ambil info creator')
+    }
+  }
+
+  const pollPublishStatus = async (publishId: string, tries = 0) => {
+    if (tries > 20) return
+    try {
+      const res  = await fetch('/api/studio/video/tiktok/publish?action=status', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ publishId }),
+      })
+      const data = await res.json()
+      if (data.status) setPubStatus(data.status)
+      const done = data.status === 'PUBLISH_COMPLETE' || data.status === 'FAILED'
+      if (!done) setTimeout(() => pollPublishStatus(publishId, tries + 1), 4000)
+    } catch { /* silent */ }
+  }
+
+  const publishToTikTok = async () => {
+    if (!videoUrl.trim()) { setPubError('Masukkan URL video dulu (mis. dari UGC Video → R2)'); return }
+    setPublishing(true); setPubError(''); setPubResult(null); setPubStatus('')
+    try {
+      const res  = await fetch('/api/studio/video/tiktok/publish?action=publish', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          videoUrl:           videoUrl.trim(),
+          title:              publishPayload?.post_info.title ?? '',
+          privacyLevel:       pubPrivacy,
+          disableComment:     pubNoComment,
+          disableDuet:        pubNoDuet,
+          disableStitch:      pubNoStitch,
+          brandContentToggle: selectedPreset.brandedContent,
+          brandOrganicToggle: selectedPreset.brandOrganic,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        if (data.needAuth) setConn({ connected: false })
+        throw new Error(data.error ?? 'Gagal publish ke TikTok')
+      }
+      setPubResult({ publishId: data.publishId, privacyUsed: data.privacyUsed, note: data.note })
+      if (data.publishId) pollPublishStatus(data.publishId)
+    } catch (e: any) {
+      setPubError(e?.message ?? 'Gagal publish ke TikTok')
+    } finally {
+      setPublishing(false)
+    }
+  }
 
   // ════════════════════════════════════════════════════════════
   return (
@@ -870,6 +1037,7 @@ export default function TikTokReelsPage() {
                       </button>
                     )
                   })}
+     
                 </div>
               </div>
 
@@ -1456,18 +1624,79 @@ export default function TikTokReelsPage() {
               {/* ── Publish tab (TikTok API ready) ───────── */}
               {activeOutput === 'publish' && publishPayload && (
                 <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
-                  <div style={{
-                    padding:'12px 14px', borderRadius:'11px',
-                    background:C.honeyXlt, border:`1px solid ${C.honey}30`,
-                    fontSize:'12px', color:C.honeyDk, lineHeight:1.6,
-                    display:'flex', gap:'8px', alignItems:'flex-start',
-                  }}>
-                    <Send size={15} style={{ flexShrink:0, marginTop:'1px' }} />
-                    <span>
-                      Metadata siap-publish ke <strong>{selectedPlatform.label}</strong>. Saat ini menghasilkan
-                      payload untuk Content Posting API — auto-posting butuh koneksi akun (OAuth) di langkah berikutnya.
-                    </span>
-                  </div>
+                  {handoffSource && (
+                    <div style={{
+                      padding:'12px 14px', borderRadius:'11px',
+                      background:C.greenLt, border:`1px solid ${C.green}30`,
+                      fontSize:'12px', color:C.green, lineHeight:1.6,
+                      display:'flex', gap:'8px', alignItems:'flex-start',
+                    }}>
+                      <span style={{ fontSize:'15px', lineHeight:1 }}>🎬</span>
+                      <span style={{ color:C.inkSub }}>
+                        Video &amp; caption dari <strong>{handoffSource === 'ugc' ? 'UGC Video Generator' : handoffSource}</strong> sudah terisi otomatis.
+                        Tinggal hubungkan TikTok → cek privacy → <strong>Publish</strong>.
+                      </span>
+                    </div>
+                  )}
+                  {/* ── Koneksi akun TikTok ── */}
+                  <Card title="Koneksi TikTok" icon="🔗" color={C.honey}>
+                    {oauthNotice && (
+                      <div style={{
+                        marginBottom:'10px', padding:'8px 11px', borderRadius:'8px',
+                        background:C.honeyXlt, border:`1px solid ${C.honey}30`,
+                        fontSize:'11px', color:C.honeyDk,
+                      }}>
+                        {oauthNotice}
+                      </div>
+                    )}
+                    {connLoading ? (
+                      <div style={{ display:'flex', alignItems:'center', gap:'8px', fontSize:'12px', color:C.inkMuted }}>
+                        <Loader2 size={14} style={{ animation:'spin .8s linear infinite' }} /> Mengecek koneksi...
+                      </div>
+                    ) : conn?.connected ? (
+                      <div style={{ display:'flex', alignItems:'center', gap:'10px', flexWrap:'wrap' }}>
+                        <div style={{
+                          display:'flex', alignItems:'center', gap:'7px',
+                          padding:'7px 11px', borderRadius:'9px',
+                          background:C.greenLt, border:`1px solid ${C.green}30`,
+                          fontSize:'12px', fontWeight:700, color:C.green,
+                        }}>
+                          <CheckCircle2 size={14} />
+                          Terhubung{(creator?.creator_username || conn.username) ? ` · @${creator?.creator_username ?? conn.username}` : ''}
+                        </div>
+                        <button type="button" onClick={disconnectTikTok}
+                          style={{
+                            padding:'7px 11px', borderRadius:'9px', border:`1px solid ${C.border}`,
+                            background:C.surface, color:C.inkMuted, fontSize:'11px', fontWeight:600,
+                            cursor:'pointer', fontFamily:'inherit',
+                          }}>
+                          Putuskan
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
+                        <div style={{ fontSize:'12px', color:C.inkSub, lineHeight:1.6 }}>
+                          Hubungkan akun TikTok untuk publish langsung dari sini ke profil kamu.
+                        </div>
+                        <button type="button" onClick={connectTikTok}
+                          style={{
+                            display:'flex', alignItems:'center', justifyContent:'center', gap:'8px',
+                            padding:'11px', borderRadius:'10px', border:'none',
+                            background:C.bee, color:'#fff', fontSize:'13px', fontWeight:800,
+                            cursor:'pointer', fontFamily:'inherit',
+                          }}>
+                          🎵 Hubungkan TikTok
+                        </button>
+                        <div style={{
+                          padding:'8px 11px', borderRadius:'8px',
+                          background:C.honeyXlt, border:`1px solid ${C.honey}25`,
+                          fontSize:'10px', color:C.honeyDk, lineHeight:1.5,
+                        }}>
+                          ⚠️ Sebelum app lolos audit TikTok, semua post otomatis <strong>privat (SELF_ONLY)</strong>.
+                        </div>
+                      </div>
+                    )}
+                  </Card>
 
                   {/* Pilih preset posting */}
                   <Card title="Pengaturan Posting" icon="⚙️">
@@ -1525,6 +1754,89 @@ export default function TikTokReelsPage() {
                     </div>
                   </Card>
 
+                  {/* ── Detail posting (privacy, interaksi, video) ── */}
+                  {conn?.connected && (
+                    <Card title="Detail Posting (wajib sebelum publish)" icon="🎚️" color={C.honey}>
+                      {!creator ? (
+                        <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
+                          <div style={{ fontSize:'11px', color:C.inkMuted, lineHeight:1.6 }}>
+                            TikTok mewajibkan menampilkan akun &amp; opsi privacy kamu sebelum posting.
+                          </div>
+                          <button type="button" onClick={loadCreatorInfo}
+                            style={{
+                              padding:'10px', borderRadius:'9px', border:`1.5px solid ${C.honey}`,
+                              background:C.surface, color:C.honeyDk, fontSize:'12px', fontWeight:700,
+                              cursor:'pointer', fontFamily:'inherit',
+                            }}>
+                            Muat opsi dari TikTok
+                          </button>
+                          {pubError && (
+                            <div style={{ fontSize:'11px', color:'#B91C1C' }}>{pubError}</div>
+                          )}
+                        </div>
+                      ) : (
+                        <div style={{ display:'flex', flexDirection:'column', gap:'14px' }}>
+                          {/* Privacy selector */}
+                          <div>
+                            <label style={{ fontSize:'11px', fontWeight:700, color:C.inkSub, display:'block', marginBottom:'6px' }}>
+                              Siapa yang bisa lihat
+                            </label>
+                            <div style={{ display:'flex', flexWrap:'wrap', gap:'6px' }}>
+                              {(creator.privacy_level_options ?? []).map((opt: string) => (
+                                <Pill
+                                  key={opt}
+                                  label={PRIVACY_LABEL[opt] ?? opt}
+                                  selected={pubPrivacy === opt}
+                                  onClick={() => setPubPrivacy(opt)}
+                                  color={C.honey}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                          {/* Interaction toggles */}
+                          <div>
+                            <label style={{ fontSize:'11px', fontWeight:700, color:C.inkSub, display:'block', marginBottom:'6px' }}>
+                              Interaksi
+                            </label>
+                            <div style={{ display:'flex', flexWrap:'wrap', gap:'6px' }}>
+                              {([
+                                { lbl:'Matikan komentar', on:pubNoComment, set:setPubNoComment, dis:!!creator.comment_disabled },
+                                { lbl:'Matikan Duet',     on:pubNoDuet,    set:setPubNoDuet,    dis:!!creator.duet_disabled },
+                                { lbl:'Matikan Stitch',   on:pubNoStitch,  set:setPubNoStitch,  dis:!!creator.stitch_disabled },
+                              ]).map((t, i) => (
+                                <button
+                                  key={i}
+                                  type="button"
+                                  disabled={t.dis}
+                                  onClick={() => t.set(!t.on)}
+                                  style={{
+                                    padding:'7px 12px', borderRadius:'99px',
+                                    border:`1.5px solid ${t.on ? C.bee : C.border}`,
+                                    background:t.on ? C.bee : C.white,
+                                    color:t.dis ? C.inkDim : (t.on ? '#fff' : C.inkSub),
+                                    fontSize:'11px', fontWeight:600,
+                                    cursor:t.dis ? 'not-allowed' : 'pointer', opacity:t.dis ? 0.5 : 1,
+                                    fontFamily:'inherit',
+                                  }}
+                                >
+                                  {t.on ? '✓ ' : ''}{t.lbl}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          {/* Video URL */}
+                          <Field
+                            label="URL Video (.mp4 publik)"
+                            value={videoUrl}
+                            onChange={setVideoUrl}
+                            placeholder="https://cdn-terverifikasi.com/video.mp4"
+                            hint="Video jadi dari UGC Generator / R2. Domain WAJIB diverifikasi di TikTok Developer Portal (PULL_FROM_URL)."
+                          />
+                        </div>
+                      )}
+                    </Card>
+                  )}
+
                   {/* Saran trending sound */}
                   <Card title="Saran Trending Sound" icon="🎵" color={C.purple}>
                     <div style={{ display:'flex', flexDirection:'column', gap:'7px' }}>
@@ -1564,6 +1876,64 @@ export default function TikTokReelsPage() {
                     <CopyBtn text={publishPayload.post_info.title} />
                   </Card>
 
+                  {/* ── Aksi Publish ── */}
+                  {conn?.connected && (
+                    <Card title="Publish ke TikTok" icon="🚀" color={C.bee}>
+                      {pubError && (
+                        <div style={{
+                          marginBottom:'10px', padding:'9px 11px', borderRadius:'8px',
+                          background:C.redLt, border:`1px solid ${C.red}30`,
+                          fontSize:'11px', color:'#B91C1C', display:'flex', gap:'7px', alignItems:'flex-start',
+                        }}>
+                          <AlertCircle size={13} style={{ flexShrink:0, marginTop:'1px' }} /> {pubError}
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={publishToTikTok}
+                        disabled={publishing || !videoUrl.trim() || !creator}
+                        style={{
+                          width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px',
+                          padding:'13px', borderRadius:'11px', border:'none',
+                          background:(!publishing && videoUrl.trim() && creator) ? C.bee : C.inkDim,
+                          color:'#fff', fontSize:'14px', fontWeight:800,
+                          cursor:(!publishing && videoUrl.trim() && creator) ? 'pointer' : 'not-allowed',
+                          opacity:(!publishing && videoUrl.trim() && creator) ? 1 : 0.5,
+                          fontFamily:'inherit',
+                        }}
+                      >
+                        {publishing
+                          ? <><Loader2 size={16} style={{ animation:'spin .8s linear infinite' }} /> Mengirim ke TikTok...</>
+                          : <><Send size={16} /> Publish Sekarang</>}
+                      </button>
+                      {!creator && (
+                        <div style={{ marginTop:'7px', fontSize:'10px', color:C.inkMuted, textAlign:'center' }}>
+                          Klik &ldquo;Muat opsi dari TikTok&rdquo; dulu di kartu Detail Posting.
+                        </div>
+                      )}
+                      {pubResult && (
+                        <div style={{
+                          marginTop:'12px', padding:'11px 13px', borderRadius:'10px',
+                          background:C.greenLt, border:`1px solid ${C.green}30`,
+                        }}>
+                          <div style={{ fontSize:'12px', fontWeight:700, color:C.green, marginBottom:'5px' }}>
+                            ✅ Terkirim ke TikTok
+                          </div>
+                          <div style={{ fontSize:'11px', color:C.inkSub, lineHeight:1.8 }}>
+                            <div>publish_id: <code>{pubResult.publishId}</code></div>
+                            <div>Status: <strong>{pubStatus || 'PROCESSING...'}</strong></div>
+                            <div>Privacy: {PRIVACY_LABEL[pubResult.privacyUsed ?? ''] ?? pubResult.privacyUsed}</div>
+                          </div>
+                          {pubResult.note && (
+                            <div style={{ marginTop:'7px', fontSize:'10px', color:C.honeyDk, lineHeight:1.5 }}>
+                              ⚠️ {pubResult.note}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </Card>
+                  )}
+
                   {/* Payload JSON */}
                   <Card title="Payload TikTok Content Posting API" icon="🧩" badge="JSON" color={C.bee}>
                     <pre style={{
@@ -1578,8 +1948,7 @@ export default function TikTokReelsPage() {
                     <div style={{ marginTop:'10px', display:'flex', gap:'7px', flexWrap:'wrap', alignItems:'center' }}>
                       <CopyBtn text={JSON.stringify(publishPayload, null, 2)} />
                       <span style={{ fontSize:'10px', color:C.inkDim, lineHeight:1.5 }}>
-                        Kirim payload ini ke route <code>/api/studio/video/tiktok/publish</code> (perlu dibuat) yang
-                        meneruskan ke TikTok dengan access_token user.
+                        Referensi payload yang dikirim ke <code>/api/studio/video/tiktok/publish</code> saat kamu klik Publish.
                       </span>
                     </div>
                   </Card>
