@@ -4,6 +4,7 @@ import type { Metadata, Viewport } from 'next'
 import Script from 'next/script'
 import { DM_Sans, Fraunces, DM_Mono } from 'next/font/google'
 import Providers from './providers'
+import { VercelAnalytics, SpeedInsights } from '@/lib/analytics/vercel'
 import './global.css'
 import './globals-responsive.css'
 
@@ -486,6 +487,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       }}>
          <Providers>
         {children}
+        <VercelAnalytics />
+        <SpeedInsights />
         <Script
           src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
           strategy="afterInteractive"
