@@ -3,6 +3,7 @@
 import type { Metadata, Viewport } from 'next'
 import Script from 'next/script'
 import { DM_Sans, Fraunces, DM_Mono } from 'next/font/google'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 import Providers from './providers'
 import './global.css'
 import './globals-responsive.css'
@@ -605,6 +606,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             />
             
             </Providers>
+        <SpeedInsights />
       </body>
 
     </html>
